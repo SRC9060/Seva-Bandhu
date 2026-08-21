@@ -1,0 +1,11 @@
+{
+  "name": "sevabandhu-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reserved frontend workspace for a future standalone Seva Bandhu UI.",
+  "scripts": {
+    "start": "echo \"No standalone frontend has been generated yet.\""
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
