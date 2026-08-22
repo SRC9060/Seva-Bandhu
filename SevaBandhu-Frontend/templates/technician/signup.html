@@ -3,388 +3,493 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup</title>
-
+    <title>Technician Signup | Seva Bandhu</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+    
     <style>
-
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --background: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
         }
 
-        body{
-            font-family:'Inter',sans-serif;
-            min-height:100vh;
-            background:#f8fafc;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            padding:24px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
 
-        form{
-
-            width:100%;
-            max-width:460px;
-
-            background:white;
-
-            padding:38px;
-
-            border-radius:28px;
-
-            border:1px solid #e5e7eb;
-
-            box-shadow:0 10px 30px rgba(0,0,0,0.06);
+        body {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-main);
         }
 
-        h1{
-
-            color:#111827;
-
-            text-align:center;
-
-            font-size:32px;
-            font-weight:800;
-
-            margin-bottom:10px;
-
-            letter-spacing:-1px;
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        .subtitle{
-
-            text-align:center;
-
-            color:#6b7280;
-
-            font-size:15px;
-
-            margin-bottom:30px;
-
-            line-height:1.6;
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            gap: 0.75rem;
         }
 
-        label{
-
-            display:block;
-
-            margin-bottom:8px;
-
-            font-size:14px;
-            font-weight:600;
-
-            color:#374151;
+        .logo-box {
+            background: var(--primary);
+            color: white;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.2rem;
         }
 
-        input[type="text"],
-        input[type="email"],
-        input[type="password"]{
-
-            width:100%;
-
-            padding:14px 16px;
-
-            border-radius:14px;
-
-            border:1px solid #d1d5db;
-
-            font-size:14px;
-
-            margin-bottom:20px;
-
-            background:white;
-
-            transition:0.25s ease;
-
-            font-family:'Inter',sans-serif;
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        
+        .logo-text span {
+            color: var(--primary);
         }
 
-        input:focus{
-
-            outline:none;
-
-            border-color:#2563eb;
-
-            box-shadow:0 0 0 4px rgba(37,99,235,0.1);
+        .nav-links {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
         }
 
-        button{
-
-            width:100%;
-
-            padding:14px;
-
-            border:none;
-
-            border-radius:14px;
-
-            font-size:14px;
-            font-weight:600;
-
-            cursor:pointer;
-
-            transition:0.25s ease;
-
-            font-family:'Inter',sans-serif;
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: color 0.2s ease;
         }
 
-        .google-btn{
-
-            background:white;
-
-            color:#111827;
-
-            border:1px solid #e5e7eb;
-
-            box-shadow:0 4px 10px rgba(0,0,0,0.04);
-
-            margin-top:5px;
-            margin-bottom:14px;
+        .nav-links a:hover {
+            color: var(--primary);
         }
 
-        .google-btn:hover{
-
-            background:#f9fafb;
-
-            transform:translateY(-1px);
+        /* Main Container */
+        .container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
         }
 
-        .signup-btn{
-
-            background:#2563eb;
-
-            color:white;
+        .signup-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 440px;
+            animation: fadeIn 0.5s ease-out;
         }
 
-        .signup-btn:hover{
-
-            background:#1d4ed8;
-
-            transform:translateY(-1px);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .login-box{
-
-            margin-top:24px;
-
-            text-align:center;
-
-            padding:22px;
-
-            background:#f8fafc;
-
-            border-radius:18px;
-
-            border:1px solid #e5e7eb;
+        .signup-card h1 {
+            font-size: 1.875rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            text-align: center;
         }
 
-        .login-box p{
-
-            margin-bottom:14px;
-
-            color:#6b7280;
-
-            font-size:14px;
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1.5;
         }
 
-        .login-link{
-
-            display:inline-block;
-
-            width:100%;
-
-            padding:13px;
-
-            background:#111827;
-
-            color:white;
-
-            text-decoration:none;
-
-            border-radius:14px;
-
-            font-weight:600;
-
-            transition:0.25s ease;
+        .error-box {
+            background: #FEF2F2;
+            color: var(--error);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            border: 1px solid #F87171;
         }
 
-        .login-link:hover{
-
-            background:#1f2937;
-
-            transform:translateY(-1px);
+        .form-group {
+            margin-bottom: 1.25rem;
         }
 
-        .error-box{
-
-            background:#fef2f2;
-
-            border:1px solid #fecaca;
-
-            color:#b91c1c;
-
-            padding:14px;
-
-            border-radius:14px;
-
-            margin-bottom:22px;
-
-            font-size:14px;
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
         }
 
-        @media(max-width:600px){
-
-            form{
-                padding:28px 22px;
-                border-radius:22px;
-            }
-
-            h1{
-                font-size:28px;
-            }
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            outline: none;
+            background: #F9FAFB;
         }
 
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background: white;
+        }
+
+        .email-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .verify-btn {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            white-space: nowrap;
+        }
+
+        .verify-btn:hover:not(:disabled) {
+            background: #374151;
+        }
+        
+        .verify-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        
+        .verify-btn:disabled {
+            background: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .verify-status {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .google-btn {
+            width: 100%;
+            background: white;
+            color: #111827;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            margin-top: 5px;
+            margin-bottom: 14px;
+            padding: 0.875rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .google-btn:hover {
+            background: #f9fafb;
+            transform: translateY(-1px);
+        }
+
+        .signup-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        }
+
+        .signup-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3);
+        }
+        
+        .signup-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-box {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .login-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
     </style>
 </head>
-
-<script type="module">
-
-/////////////////////////////////////////////////////
-// FIREBASE IMPORTS
-/////////////////////////////////////////////////////
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-import {
-    getAuth,
-    GoogleAuthProvider,
-    signInWithPopup
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-/////////////////////////////////////////////////////
-// FIREBASE CONFIG
-/////////////////////////////////////////////////////
-
-const firebaseConfig = {
-
-    apiKey: "{{ firebase_config.api_key|escapejs }}",
-
-    authDomain: "{{ firebase_config.auth_domain|escapejs }}",
-
-    projectId: "{{ firebase_config.project_id|escapejs }}",
-
-    storageBucket: "{{ firebase_config.storage_bucket|escapejs }}",
-
-    messagingSenderId: "{{ firebase_config.messaging_sender_id|escapejs }}",
-
-    appId: "{{ firebase_config.app_id|escapejs }}"
-};
-
-/////////////////////////////////////////////////////
-// INITIALIZE FIREBASE
-/////////////////////////////////////////////////////
-
-const app = initializeApp(firebaseConfig);
-
-const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-
-/////////////////////////////////////////////////////
-// GOOGLE SIGNUP BUTTON
-/////////////////////////////////////////////////////
-
-window.googleSignup = async function() {
-
-    try {
-
-        const result = await signInWithPopup(auth, provider);
-
-        const user = result.user;
-
-        console.log("✅ GOOGLE USER:", user);
-
-        const name = user.displayName;
-        const email = user.email;
-        const photo = user.photoURL;
-
-        localStorage.setItem("google_name", name);
-        localStorage.setItem("google_email", email);
-        localStorage.setItem("google_photo", photo);
-
-        alert("Google Login Success 😎🔥");
-
-    } catch (error) {
-
-        console.error("🔥 FULL FIREBASE ERROR:", error);
-
-        alert(error.message);
-    }
-};
-
-</script>
-
 <body>
 
-    <form method="post">
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="logo">
+            <div class="logo-box">SB</div>
+            <div class="logo-text">Seva <span>Bandhu</span></div>
+        </a>
+        <ul class="nav-links">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'customer_login' %}">Customer</a></li>
+            <li><a href="{% url 'technician_login' %}">Technician</a></li>
+        </ul>
+    </nav>
 
-       {% csrf_token %}
+    <!-- Main Content -->
+    <div class="container">
+        <div class="signup-card">
+            <form method="post">
+                {% csrf_token %}
+                
+                <h1>Technician Signup</h1>
+                <p class="subtitle">Create your technician account and start managing service requests efficiently.</p>
+                
+                {% if error %}
+                <div class="error-box">
+                    {{ error }}
+                </div>
+                {% endif %}
 
-        <h1>Technician Signup</h1>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="{{ form_data.username|default_if_none:'' }}" required>
+                </div>
 
-        <p class="subtitle">
-            Create your technician account and start managing service requests efficiently.
-        </p>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <div class="email-group">
+                        <input type="email" id="email" name="email" value="{{ form_data.email|default_if_none:'' }}" required>
+                        <button type="button" class="verify-btn" onclick="window.verifyEmail()">Verify</button>
+                    </div>
+                    
+                    <div id="code-entry-section" style="display: none; margin-top: 1rem;">
+                        <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">A 6-digit code has been sent to your email.</p>
+                        <label for="verification-code">6-digit verification code</label>
+                        <div class="email-group">
+                            <input type="text" id="verification-code" placeholder="Enter code" style="flex: 1;">
+                            <button type="button" class="verify-btn" style="background: var(--primary);" onclick="window.submitVerificationCode()">Confirm</button>
+                        </div>
+                    </div>
 
-        {% if error %}
-        <div class="error-box">
-            {{ error }}
+                    <div id="verify-status" class="verify-status">
+                        {% if verified_email %}
+                            <span style="color:var(--success);">✅ Email verified: {{ verified_email }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact">Contact</label>
+                    <input type="text" id="contact" name="contact" value="{{ form_data.contact|default_if_none:'' }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button
+                    type="button"
+                    onclick="googleSignup()"
+                    class="google-btn">
+                    Continue with Google
+                </button>
+
+                <button type="submit" class="signup-btn">Sign Up</button>
+
+                <div class="login-box">
+                    <p>Already have an account? <a href="{% url 'technician_login' %}" class="login-link">Login Here</a></p>
+                </div>
+            </form>
         </div>
-        {% endif %}
+    </div>
 
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" required>
+    <!-- Footer -->
+    <footer>
+        &copy; 2026 Seva Bandhu | Technician Service Assigning System
+    </footer>
 
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
+    <!-- Verification Script -->
+    <script>
+    window.verifyEmail = async function() {
+        const email = document.getElementById('email').value.trim();
+        if (!email) {
+            alert('Please enter an email address first.');
+            return;
+        }
 
-        <label for="contact">Contact</label>
-        <input type="text" id="contact" name="contact" required>
+        const verifyBtn = document.querySelector('.verify-btn');
+        verifyBtn.innerText = 'Sending...';
+        verifyBtn.disabled = true;
 
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+        try {
+            const response = await fetch('/send-verification-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+            
+            verifyBtn.innerText = 'Verify';
+            verifyBtn.disabled = false;
 
-        <button
-            type="button"
-            onclick="googleSignup()"
-            class="google-btn">
+            if (data.status === 'success') {
+                document.getElementById('code-entry-section').style.display = 'block';
+                document.getElementById('verify-status').innerHTML = '';
+            } else {
+                alert(data.message || 'Error sending verification email.');
+            }
+        } catch (err) {
+            alert('Network error. Please try again later.');
+            verifyBtn.innerText = 'Verify';
+            verifyBtn.disabled = false;
+        }
+    };
 
-            Continue with Google
+    window.submitVerificationCode = function() {
+        const email = document.getElementById('email').value.trim();
+        const code = document.getElementById('verification-code').value.trim();
+        
+        if (!code) {
+            alert('Please enter the 6-digit code.');
+            return;
+        }
+        
+        verifyCode(email, code);
+    };
 
-        </button>
-
-        <button type="submit" class="signup-btn">
-            Sign Up
-        </button>
-
-        <div class="login-box">
-
-            <p>Already have an account?</p>
-
-            <a href="{% url 'technician_login' %}" class="login-link">
-                Login Here
-            </a>
-
-        </div>
-
-    </form>
-
+    async function verifyCode(email, code) {
+        try {
+            const response = await fetch('/verify-email-code/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, code })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                document.getElementById('verify-status').innerHTML = '<span style="color:var(--success);">✅ Email verified: ' + email + '</span>';
+                document.getElementById('code-entry-section').style.display = 'none';
+                alert('Email verified successfully!');
+            } else {
+                alert(data.message || 'Invalid code. Please try again.');
+            }
+        } catch (err) {
+            alert('Network error while verifying code.');
+        }
+    }
+    </script>
+    
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    
+    const firebaseConfig = {
+        apiKey: "{{ firebase_config.api_key|escapejs }}",
+        authDomain: "{{ firebase_config.auth_domain|escapejs }}",
+        projectId: "{{ firebase_config.project_id|escapejs }}",
+        storageBucket: "{{ firebase_config.storage_bucket|escapejs }}",
+        messagingSenderId: "{{ firebase_config.messaging_sender_id|escapejs }}",
+        appId: "{{ firebase_config.app_id|escapejs }}"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    
+    window.googleSignup = async function() {
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+            console.log("✅ GOOGLE USER:", user);
+            const name = user.displayName;
+            const email = user.email;
+            const photo = user.photoURL;
+            localStorage.setItem("google_name", name);
+            localStorage.setItem("google_email", email);
+            localStorage.setItem("google_photo", photo);
+            alert("Google Login Success 😎🔥");
+        } catch (error) {
+            console.error("🔥 FULL FIREBASE ERROR:", error);
+            alert(error.message);
+        }
+    };
+    </script>
 </body>
 </html>

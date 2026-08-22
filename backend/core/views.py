@@ -9,13 +9,20 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.template.loader import get_template
 from django.urls import reverse
+from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.views.decorators.csrf import csrf_exempt
+# pyrefly: ignore [missing-import]
 from xhtml2pdf import pisa
 import json
 import random
 import uuid
+import hashlib
+import secrets
+import time
 
 from .models import (
     TechnicianNotification,
@@ -179,9 +186,9 @@ def technician_update_status(request):
 
 def technician_sign_up(request):
     if request.method == "POST":
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        contact = request.POST.get('contact')
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+        contact = request.POST.get('contact', '').strip()
         password = request.POST.get('password')
 
         # Check if username already exists
@@ -191,7 +198,7 @@ def technician_sign_up(request):
             })
 
         # Check if email already exists
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             return render(request, 'technician/signup.html', {
                 'error': 'Email already registered. Please use a different email or login.'
             })
@@ -201,7 +208,7 @@ def technician_sign_up(request):
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                password=password
+                password=''  # Password hashes live only on Django's User model.
             )
 
             # Create technician profile with all fields
@@ -230,7 +237,7 @@ def technician_login(request):
 
         user = authenticate(request, username=username, password=password)
 
-        if user is not None:
+        if user is not None and Technician_signup.objects.filter(user=user).exists():
             logout(request)  # ✅ CLEAR OLD SESSION
             login(request, user)
             request.session.save()  # ✅ FORCE SAVE
@@ -239,7 +246,7 @@ def technician_login(request):
 
         else:
             return render(request, 'technician/login.html', {
-                'error': 'Invalid username or password. Please try again.'
+                'error': 'Invalid technician username or password. Please try again.'
             })
 
     return render(request, 'technician/login.html')
@@ -560,240 +567,88 @@ def customer_phone_verification(request):
     })
 
 
+def _send_customer_verification_email(email, code):
+    """Send a short email OTP. No verification links are used."""
+    send_mail(
+        subject='Your Seva Bandhu verification code',
+        message=(f'Your Seva Bandhu verification code is: {code}\n\n'
+                 'It expires in 10 minutes. Do not share this code with anyone.'),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+
 def customer_sign_up(request):
-
-    verified_email = request.session.get(
-        'verified_email'
-    )
-
-    if request.method == "POST":
-
-        username = request.POST.get(
-            'username'
-        )
-
-        email = request.POST.get(
-            'email'
-        )
-
-        contact = request.POST.get(
-            'contact'
-        )
-
-        password = request.POST.get(
-            'password'
-        )
-
-        #################################################
-        # EMAIL MUST BE VERIFIED
-        #################################################
-
-        if not verified_email or verified_email != email:
-
-            return render(
-
-                request,
-
-                'customer/signup.html',
-
-                {
-
-                    'error':
-                    'Please verify this email before signing up.',
-
-                    'verified_email':
-                    verified_email
-
-                }
-
-            )
-
-        #################################################
-        # USERNAME EXISTS
-        #################################################
-
-        if User.objects.filter(
-            username=username
-        ).exists():
-
-            return render(
-
-                request,
-
-                'customer/signup.html',
-
-                {
-
-                    'error':
-                    'Username already exists.',
-
-                    'verified_email':
-                    verified_email
-
-                }
-
-            )
-
-        #################################################
-        # EMAIL EXISTS
-        #################################################
-
-        if User.objects.filter(
-            email=email
-        ).exists():
-
-            return render(
-
-                request,
-
-                'customer/signup.html',
-
-                {
-
-                    'error':
-                    'Email already registered.',
-
-                    'verified_email':
-                    verified_email
-
-                }
-
-            )
-
-        try:
-
-            #################################################
-            # CREATE DJANGO USER
-            #################################################
-
-            user = User.objects.create_user(
-
-                username=username,
-
-                email=email,
-
-                password=password
-
-            )
-
-            #################################################
-            # CREATE CUSTOMER
-            #################################################
-
-            customer_signup.objects.create(
-
-                user=user,
-
-                username=username,
-
-                email=email,
-
-                contact=contact,
-
-                password=password,
-
-                email_verified=True,
-
-                phone_verified=False
-
-            )
-
-            #################################################
-            # SAVE USER SESSION
-            #################################################
-
-            request.session[
-                'pending_phone_user'
-            ] = user.id
-
-            #################################################
-            # CLEAN EMAIL SESSIONS
-            #################################################
-
-            request.session.pop(
-                'verified_email',
-                None
-            )
-
-            request.session.pop(
-                'email_verification_token',
-                None
-            )
-
-            request.session.pop(
-                'email_to_verify',
-                None
-            )
-
-            #################################################
-            # REDIRECT PHONE VERIFICATION
-            #################################################
-
-            return redirect(
-                     '/customer/phone-verification/'
-)
-    
-
-        except Exception as e:
-
-            return render(
-
-                request,
-
-                'customer/signup.html',
-
-                {
-
-                    'error':
-                    f'An error occurred: {str(e)}',
-
-                    'verified_email':
-                    verified_email
-
-                }
-
-            )
-
-    return render(
-
-        request,
-
-        'customer/signup.html',
-
-        {
-
-            'verified_email':
-            verified_email
-
-        }
-
-    )
+    if request.method != 'POST':
+        return render(request, 'customer/signup.html', {
+            'verified_email': request.session.get('verified_email', '')
+        })
+
+    username = request.POST.get('username', '').strip()
+    email = request.POST.get('email', '').strip().lower()
+    contact = request.POST.get('contact', '').strip()
+    password = request.POST.get('password', '')
+    form_data = {'username': username, 'email': email, 'contact': contact}
+    verified_email = request.session.get('verified_email', '')
+    context = {'form_data': form_data, 'verified_email': verified_email}
+    if not all([username, email, contact, password]):
+        context['error'] = 'Please complete every field.'
+        return render(request, 'customer/signup.html', context)
+    if verified_email != email:
+        context['error'] = 'Please verify this email before signing up.'
+        return render(request, 'customer/signup.html', context)
+    if User.objects.filter(username__iexact=username).exists():
+        context['error'] = 'That username is already in use. Please log in or choose another one.'
+        return render(request, 'customer/signup.html', context)
+    if User.objects.filter(email__iexact=email).exists():
+        context['error'] = 'An account already exists for this email. Please log in.'
+        return render(request, 'customer/signup.html', context)
+    try:
+        validate_password(password, user=User(username=username, email=email))
+        with transaction.atomic():
+            user = User.objects.create_user(username=username, email=email, password=password)
+            customer = customer_signup.objects.create(user=user, username=username, email=email, contact=contact,
+                                                       password='', email_verified=True, phone_verified=False)
+        request.session.pop('verified_email', None)
+        request.session.pop('verification_code_hash', None)
+        request.session.pop('verification_code_email', None)
+        request.session.pop('verification_code_created_at', None)
+    except ValidationError as error:
+        context['error'] = ' '.join(error.messages)
+        return render(request, 'customer/signup.html', context)
+    return redirect('customer_login')
 
 
 def customer_login(request):
     if request.method == "POST":
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
 
-        # Authenticate user
+        possible_user = User.objects.filter(username__iexact=username).first()
+        if possible_user and not possible_user.is_active:
+            customer = customer_signup.objects.filter(user=possible_user, email_verified=False).first()
+            if customer:
+                return render(request, 'customer/login.html', {
+                    'error': 'Your account is waiting for email verification.', 'pending_email': customer.email
+                })
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            # Check email verification status if a customer profile exists
-            try:
-                customer = customer_signup.objects.get(user=user)
-            except customer_signup.DoesNotExist:
-                customer = None
+            customer = customer_signup.objects.filter(user=user).first()
 
-            if customer and not customer.email_verified and customer.verification_token:
+            if not customer:
                 return render(request, 'customer/login.html', {
-                    'error': 'Please verify your email first.'
+                    'error': 'This is not a customer account. Please use technician login.'
+                })
+            if not customer.email_verified:
+                return render(request, 'customer/login.html', {
+                    'error': 'Please verify your email first.', 'pending_email': customer.email
                 })
 
-            # Log the user in
             login(request, user)
-            customer_signup.objects.get_or_create(user=user)
-            return redirect('service_selection')
+            return redirect('customer_dashboard')
         else:
             return render(request, 'customer/login.html', {
                 'error': 'Invalid username or password. Please try again.'
@@ -1149,40 +1004,34 @@ def customer_google_auth(request):
         "status": "failed"
 
     })
-def verify_email(request, token):
 
-    saved_token = request.session.get(
-        'email_verification_token'
-    )
+@csrf_exempt
+def verify_email_code(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'failed', 'message': 'POST required.'})
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        code = str(data.get('code', '')).strip()
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'status': 'failed', 'message': 'Invalid request data.'})
+    created_at = request.session.get('verification_code_created_at', 0)
+    expected_hash = request.session.get('verification_code_hash')
+    if email != request.session.get('verification_code_email') or not expected_hash:
+        return JsonResponse({'status': 'failed', 'message': 'Send a verification code for this email first.'})
+    if time.time() - created_at > 600:
+        return JsonResponse({'status': 'failed', 'message': 'This code has expired. Please send a new one.'})
+    if not (len(code) == 6 and code.isdigit()) or not secrets.compare_digest(
+        hashlib.sha256(code.encode()).hexdigest(), expected_hash
+    ):
+        return JsonResponse({'status': 'failed', 'message': 'That code is incorrect. Please try again.'})
+    request.session['verified_email'] = email
+    request.session.pop('verification_code_hash', None)
+    request.session.pop('verification_code_created_at', None)
+    return JsonResponse({'status': 'success', 'message': 'Email verified.'})
 
-    email = request.session.get(
-        'email_to_verify'
-    )
 
-    if token == saved_token and email:
-
-        request.session[
-            'verified_email'
-        ] = email
-
-        request.session.save()
-
-        return redirect(
-            '/customer/signup/'
-        )
-
-    return HttpResponse(
-
-        '''
-
-        <h1>
-            ❌ Invalid Verification Link
-        </h1>
-
-        '''
-
-    )
-
+@csrf_exempt
 def send_verification_email(request):
     if request.method != "POST":
         return JsonResponse({
@@ -1190,84 +1039,30 @@ def send_verification_email(request):
             "message": "Invalid request"
         })
 
-    print("🔥 VERIFY EMAIL API HIT")
-
     try:
-        ####################################################
-        # GET DATA
-        ####################################################
-        data = json.loads(request.body)
-        email = data.get("email")
-
-        ####################################################
-        # CHECK EMPTY EMAIL
-        ####################################################
-        if not email:
-            return JsonResponse({
-                "status": "failed",
-                "message": "Email is required"
-            })
-
-        ####################################################
-        # CHECK EMAIL ALREADY REGISTERED
-        ####################################################
-        if User.objects.filter(email=email).exists():
-            return JsonResponse({
-                "status": "failed",
-                "message": "Email already registered"
-            })
-
-        ####################################################
-        # GENERATE TOKEN
-        ####################################################
-        token = str(uuid.uuid4())
-
-        ####################################################
-        # SAVE SESSION
-        ####################################################
-        request.session['email_verification_token'] = token
-        request.session['email_to_verify'] = email
-        request.session.save()
-
-        ####################################################
-        # SEND EMAIL
-        ####################################################
-        verification_link = request.build_absolute_uri(
-            reverse('verify_email', kwargs={'token': token})
-        )
-
-        print("🔥 TRYING TO SEND EMAIL")
-        send_mail(
-            subject='Verify Your Email - Seva Bandhu',
-            message=f'''
-Hi,
-
-Please click the link below to verify your email address:
-
-{verification_link}
-
-If you did not request this email,
-please ignore it.
-
-Team Seva Bandhu
-''',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False
-        )
-        print("🔥 EMAIL SENT SUCCESSFULLY")
-
+        email = json.loads(request.body).get('email', '').strip().lower()
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'status': 'failed', 'message': 'Invalid request data.'})
+    if not email:
+        return JsonResponse({'status': 'failed', 'message': 'Enter an email address first.'})
+    existing = User.objects.filter(email__iexact=email).first()
+    if existing and customer_signup.objects.filter(user=existing, email_verified=True).exists():
         return JsonResponse({
-            "status": "success",
-            "message": "Verification email sent"
+            'status': 'failed',
+            'message': 'An account already exists for this email. Please log in.'
         })
-
-    except Exception as mail_error:
-        print("🔥 EMAIL ERROR:", str(mail_error))
+    code = f'{secrets.randbelow(1_000_000):06d}'
+    request.session['verification_code_hash'] = hashlib.sha256(code.encode()).hexdigest()
+    request.session['verification_code_email'] = email
+    request.session['verification_code_created_at'] = int(time.time())
+    try:
+        _send_customer_verification_email(email, code)
+    except Exception:
         return JsonResponse({
-            "status": "failed",
-            "message": str(mail_error)
+            'status': 'failed',
+            'message': 'We could not send the verification email. Check the email settings and try again.'
         })
+    return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
 
 
 @csrf_exempt

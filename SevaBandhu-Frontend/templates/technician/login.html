@@ -1,265 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Technician Login</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-<style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-
-    min-height:100vh;
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    padding:24px;
-
-    background:#f8fafc;
-
-    font-family:'Inter',sans-serif;
-}
-
-/* ===== Main Login Card ===== */
-
-.container{
-
-    width:100%;
-    max-width:460px;
-}
-
-/* ===== Heading ===== */
-
-h2{
-
-    color:#111827;
-
-    text-align:center;
-
-    font-size:32px;
-    font-weight:800;
-
-    letter-spacing:-1px;
-
-    margin-bottom:12px;
-}
-
-.subtitle{
-
-    text-align:center;
-
-    color:#6b7280;
-
-    font-size:15px;
-
-    line-height:1.6;
-
-    margin-bottom:32px;
-}
-
-/* ===== Form Box ===== */
-
-form{
-
-    background:white;
-
-    padding:38px;
-
-    border-radius:28px;
-
-    border:1px solid #e5e7eb;
-
-    box-shadow:0 10px 30px rgba(0,0,0,0.06);
-}
-
-/* ===== Labels ===== */
-
-label{
-
-    display:block;
-
-    margin-bottom:8px;
-
-    font-size:14px;
-    font-weight:600;
-
-    color:#374151;
-}
-
-/* ===== Inputs ===== */
-
-input[type="text"],
-input[type="password"]{
-
-    width:100%;
-
-    padding:14px 16px;
-
-    margin-bottom:22px;
-
-    border-radius:14px;
-
-    border:1px solid #d1d5db;
-
-    font-size:14px;
-
-    background:white;
-
-    transition:0.25s ease;
-
-    font-family:'Inter',sans-serif;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus{
-
-    outline:none;
-
-    border-color:#2563eb;
-
-    box-shadow:0 0 0 4px rgba(37,99,235,0.1);
-}
-
-/* ===== Login Button ===== */
-
-input[type="submit"]{
-
-    width:100%;
-
-    padding:14px;
-
-    background:#2563eb;
-
-    color:white;
-
-    border:none;
-
-    border-radius:14px;
-
-    font-size:15px;
-    font-weight:600;
-
-    cursor:pointer;
-
-    transition:0.25s ease;
-
-    font-family:'Inter',sans-serif;
-
-    box-shadow:0 6px 18px rgba(37,99,235,0.18);
-}
-
-input[type="submit"]:hover{
-
-    background:#1d4ed8;
-
-    transform:translateY(-2px);
-}
-
-/* ===== Logout Section ===== */
-
-.logout{
-
-    text-align:center;
-
-    margin-top:24px;
-}
-
-.logout a{
-
-    display:inline-flex;
-
-    align-items:center;
-    justify-content:center;
-
-    text-decoration:none;
-
-    background:#111827;
-
-    color:white;
-
-    padding:13px 22px;
-
-    border-radius:14px;
-
-    font-size:14px;
-    font-weight:600;
-
-    transition:0.25s ease;
-}
-
-.logout a:hover{
-
-    background:#1f2937;
-
-    transform:translateY(-1px);
-}
-
-/* ===== Responsive ===== */
-
-@media(max-width:600px){
-
-    form{
-        padding:28px 22px;
-        border-radius:22px;
-    }
-
-    h2{
-        font-size:28px;
-    }
-
-    .subtitle{
-        font-size:14px;
-    }
-
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technician Login | Seva Bandhu</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --background: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-main);
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            gap: 0.75rem;
+        }
+
+        .logo-box {
+            background: var(--primary);
+            color: white;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Main Container */
+        .container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 440px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card h1 {
+            font-size: 1.875rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .error-box {
+            background: #FEF2F2;
+            color: var(--error);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            border: 1px solid #F87171;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            outline: none;
+            background: #F9FAFB;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background: white;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        }
+
+        .login-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .signup-box {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .signup-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .signup-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="logo">
+            <div class="logo-box">SB</div>
+            <div class="logo-text">Seva <span>Bandhu</span></div>
+        </a>
+        <ul class="nav-links">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'customer_login' %}">Customer</a></li>
+            <li><a href="{% url 'technician_login' %}">Technician</a></li>
+        </ul>
+    </nav>
 
-    <h2>Technician Login</h2>
+    <!-- Main Content -->
+    <div class="container">
+        <div class="login-card">
+            <form method="post">
+                {% csrf_token %}
+                
+                <h1>Technician Login</h1>
+                <p class="subtitle">Login to manage assigned jobs, update live status, and track customer service requests.</p>
+                
+                {% if error %}
+                <div class="error-box">
+                    {{ error }}
+                </div>
+                {% endif %}
 
-    <p class="subtitle">
-        Login to manage assigned jobs, update live status,
-        and track customer service requests.
-    </p>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
 
-    <form method="post">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
 
-        {% csrf_token %}
+                <button type="submit" class="login-btn">Login</button>
 
-        <label for="username">
-            Username
-        </label>
+                <div class="signup-box">
+                    <p>New technician? <a href="{% url 'technician_signup' %}" class="signup-link">Create an account</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        <input type="text" id="username" name="username" required>
-
-        <label for="password">
-            Password
-        </label>
-
-        <input type="password" id="password" name="password" required>
-
-        <input type="submit" value="Login">
-
-    </form>
-</div>
+    <!-- Footer -->
+    <footer>
+        &copy; 2026 Seva Bandhu | Technician Service Assigning System
+    </footer>
 
 </body>
 </html>

@@ -2,13 +2,14 @@ from django.conf import settings
 
 
 def firebase_config(request):
+    firebase_config = getattr(settings, 'FIREBASE_CONFIG', {})
     return {
         'firebase_config': {
-            'api_key': settings.FIREBASE_API_KEY,
-            'auth_domain': settings.FIREBASE_AUTH_DOMAIN,
-            'project_id': settings.FIREBASE_PROJECT_ID,
-            'storage_bucket': settings.FIREBASE_STORAGE_BUCKET,
-            'messaging_sender_id': settings.FIREBASE_MESSAGING_SENDER_ID,
-            'app_id': settings.FIREBASE_APP_ID,
+            'api_key': firebase_config.get('api_key', ''),
+            'auth_domain': firebase_config.get('auth_domain', ''),
+            'project_id': firebase_config.get('project_id', ''),
+            'storage_bucket': firebase_config.get('storage_bucket', ''),
+            'messaging_sender_id': firebase_config.get('messaging_sender_id', ''),
+            'app_id': firebase_config.get('app_id', ''),
         }
     }

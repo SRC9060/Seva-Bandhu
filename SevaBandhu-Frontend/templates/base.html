@@ -1,694 +1,753 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Seva Bandhus</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Seva Bandhus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
-<style>
-
-/* =========================
+    <style>
+        /* =========================
    RESET
 ========================= */
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-html{
-    scroll-behavior:smooth;
-}
+        html {
+            scroll-behavior: smooth;
+        }
 
-body{
-    font-family:'Inter',sans-serif;
-    background:#f8fafc;
-    color:#111827;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-}
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #111827;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-/* =========================
+        /* =========================
    VARIABLES
 ========================= */
 
-:root{
+        :root {
 
-    --primary:#2563eb;
-    --primary-dark:#1d4ed8;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
 
-    --bg:#f8fafc;
-    --white:#ffffff;
+            --bg: #f8fafc;
+            --white: #ffffff;
 
-    --text:#111827;
-    --text-light:#6b7280;
+            --text: #111827;
+            --text-light: #6b7280;
 
-    --border:#e5e7eb;
+            --border: #e5e7eb;
 
-    --shadow-sm:0 1px 3px rgba(0,0,0,0.06);
-    --shadow-md:0 4px 14px rgba(0,0,0,0.08);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.08);
 
-    --radius:14px;
-}
+            --radius: 14px;
+        }
 
-/* =========================
-   NAVBAR
+        /* =========================
+   NAVBAR & HEADER
 ========================= */
 
-.navbar{
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            height: 76px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            transition: all 0.3s ease;
+        }
 
-    position:sticky;
-    top:0;
-    z-index:1000;
+        /* Logo */
 
-    height:70px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
 
-    background:rgba(255,255,255,0.9);
+        .logo-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 16px;
+            box-shadow: 0 6px 16px -2px rgba(37, 99, 235, 0.35);
+            transition: transform 0.3s ease;
+        }
 
-    backdrop-filter:blur(10px);
+        .logo:hover .logo-box {
+            transform: scale(1.06) rotate(-3deg);
+        }
 
-    border-bottom:1px solid var(--border);
+        .logo-text {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
 
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+        .logo-text span {
+            background: linear-gradient(135deg, #2563eb 0%, #ff6b35 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-    padding:0 40px;
-}
+        /* Nav Links */
 
-/* Logo */
+        .nav-links {
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:12px;
+        .nav-links li a {
+            text-decoration: none;
+            color: #475569;
+            font-size: 14.5px;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 12px;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    text-decoration:none;
-}
+        .nav-links li a:hover {
+            background: #eff6ff;
+            color: #2563eb;
+        }
 
-.logo-box{
+        /* Nav Actions Right */
 
-    width:38px;
-    height:38px;
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-    border-radius:12px;
+        .nav-btn-admin {
+            font-size: 13.5px;
+            font-weight: 700;
+            padding: 9px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            background: #f3e8ff;
+            color: #7e22ce;
+            border: 1px solid #e9d5ff;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    background:var(--primary);
+        .nav-btn-admin:hover {
+            background: #8b5cf6;
+            color: #ffffff;
+            border-color: #8b5cf6;
+            transform: translateY(-1px);
+        }
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+        .nav-btn-cta {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.4);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    color:white;
-    font-weight:800;
-    font-size:14px;
+        .nav-btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.55);
+        }
 
-    box-shadow:var(--shadow-sm);
-}
-
-.logo-text{
-
-    font-size:18px;
-    font-weight:700;
-    color:var(--text);
-}
-
-.logo-text span{
-    color:var(--primary);
-}
-
-/* Nav Links */
-
-.nav-links{
-
-    list-style:none;
-
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-
-.nav-links li a{
-
-    text-decoration:none;
-
-    color:var(--text-light);
-
-    font-size:14px;
-    font-weight:500;
-
-    padding:10px 16px;
-
-    border-radius:10px;
-
-    transition:0.25s;
-}
-
-.nav-links li a:hover{
-
-    background:#eff6ff;
-    color:var(--primary);
-}
-
-/* =========================
+        /* =========================
    MAIN CONTAINER
 ========================= */
 
-.container{
+        .container {
 
-    flex:1;
+            flex: 1;
 
-    width:100%;
+            width: 100%;
 
-    padding:40px;
-}
+            padding: 40px;
+        }
 
-/* =========================
+        /* =========================
    PAGE HEADER
 ========================= */
 
-.page-header{
+        .page-header {
 
-    margin-bottom:30px;
-}
+            margin-bottom: 30px;
+        }
 
-.page-title{
+        .page-title {
 
-    font-size:30px;
-    font-weight:800;
+            font-size: 30px;
+            font-weight: 800;
 
-    color:var(--text);
+            color: var(--text);
 
-    margin-bottom:8px;
-}
+            margin-bottom: 8px;
+        }
 
-.page-subtitle{
+        .page-subtitle {
 
-    color:var(--text-light);
+            color: var(--text-light);
 
-    font-size:15px;
-}
+            font-size: 15px;
+        }
 
-/* =========================
+        /* =========================
    GRID
 ========================= */
 
-.grid-2{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:20px;
-}
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
 
-.grid-3{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-}
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
 
-.grid-4{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:20px;
-}
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
 
-/* =========================
+        /* =========================
    CARD
 ========================= */
 
-.card{
+        .card {
 
-    background:var(--white);
+            background: var(--white);
 
-    border:1px solid var(--border);
+            border: 1px solid var(--border);
 
-    border-radius:var(--radius);
+            border-radius: var(--radius);
 
-    padding:24px;
+            padding: 24px;
 
-    box-shadow:var(--shadow-sm);
+            box-shadow: var(--shadow-sm);
 
-    transition:0.25s;
-}
+            transition: 0.25s;
+        }
 
-.card:hover{
+        .card:hover {
 
-    transform:translateY(-2px);
+            transform: translateY(-2px);
 
-    box-shadow:var(--shadow-md);
-}
+            box-shadow: var(--shadow-md);
+        }
 
-.card-title{
+        .card-title {
 
-    font-size:18px;
-    font-weight:700;
+            font-size: 18px;
+            font-weight: 700;
 
-    margin-bottom:16px;
+            margin-bottom: 16px;
 
-    color:var(--text);
-}
+            color: var(--text);
+        }
 
-.card-subtitle{
+        .card-subtitle {
 
-    color:var(--text-light);
+            color: var(--text-light);
 
-    font-size:14px;
+            font-size: 14px;
 
-    margin-bottom:20px;
-}
+            margin-bottom: 20px;
+        }
 
-/* =========================
+        /* =========================
    STAT CARDS
 ========================= */
 
-.stat-card{
+        .stat-card {
 
-    background:white;
+            background: white;
 
-    border:1px solid var(--border);
+            border: 1px solid var(--border);
 
-    border-radius:16px;
+            border-radius: 16px;
 
-    padding:24px;
+            padding: 24px;
 
-    box-shadow:var(--shadow-sm);
+            box-shadow: var(--shadow-sm);
 
-    transition:0.25s;
-}
+            transition: 0.25s;
+        }
 
-.stat-card:hover{
+        .stat-card:hover {
 
-    transform:translateY(-3px);
+            transform: translateY(-3px);
 
-    box-shadow:var(--shadow-md);
-}
+            box-shadow: var(--shadow-md);
+        }
 
-.stat-title{
+        .stat-title {
 
-    color:var(--text-light);
+            color: var(--text-light);
 
-    font-size:13px;
+            font-size: 13px;
 
-    margin-bottom:12px;
+            margin-bottom: 12px;
 
-    text-transform:uppercase;
-    letter-spacing:1px;
-}
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-.stat-number{
+        .stat-number {
 
-    font-size:32px;
-    font-weight:800;
+            font-size: 32px;
+            font-weight: 800;
 
-    color:var(--text);
-}
+            color: var(--text);
+        }
 
-/* =========================
+        /* =========================
    BUTTONS
 ========================= */
 
-.btn{
+        .btn {
 
-    border:none;
+            border: none;
 
-    padding:12px 18px;
+            padding: 12px 18px;
 
-    border-radius:10px;
+            border-radius: 10px;
 
-    font-size:14px;
-    font-weight:600;
+            font-size: 14px;
+            font-weight: 600;
 
-    cursor:pointer;
+            cursor: pointer;
 
-    transition:0.25s;
+            transition: 0.25s;
 
-    text-decoration:none;
+            text-decoration: none;
 
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-}
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.btn-primary{
+        .btn-primary {
 
-    background:var(--primary);
-    color:white;
-}
+            background: var(--primary);
+            color: white;
+        }
 
-.btn-primary:hover{
+        .btn-primary:hover {
 
-    background:var(--primary-dark);
+            background: var(--primary-dark);
 
-    transform:translateY(-1px);
-}
+            transform: translateY(-1px);
+        }
 
-.btn-secondary{
+        .btn-secondary {
 
-    background:white;
+            background: white;
 
-    color:var(--text);
+            color: var(--text);
 
-    border:1px solid var(--border);
-}
+            border: 1px solid var(--border);
+        }
 
-.btn-secondary:hover{
+        .btn-secondary:hover {
 
-    background:#f9fafb;
-}
+            background: #f9fafb;
+        }
 
-/* =========================
+        /* =========================
    FORMS
 ========================= */
 
-.form-group{
-    margin-bottom:20px;
-}
+        .form-group {
+            margin-bottom: 20px;
+        }
 
-.form-label{
+        .form-label {
 
-    display:block;
+            display: block;
 
-    margin-bottom:8px;
+            margin-bottom: 8px;
 
-    font-size:14px;
-    font-weight:600;
+            font-size: 14px;
+            font-weight: 600;
 
-    color:var(--text);
-}
+            color: var(--text);
+        }
 
-.form-input,
-.form-select,
-.form-textarea{
+        .form-input,
+        .form-select,
+        .form-textarea {
 
-    width:100%;
+            width: 100%;
 
-    padding:13px 14px;
+            padding: 13px 14px;
 
-    border:1px solid var(--border);
+            border: 1px solid var(--border);
 
-    border-radius:12px;
+            border-radius: 12px;
 
-    font-size:14px;
+            font-size: 14px;
 
-    background:white;
+            background: white;
 
-    transition:0.25s;
-}
+            transition: 0.25s;
+        }
 
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus{
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
 
-    outline:none;
+            outline: none;
 
-    border-color:var(--primary);
+            border-color: var(--primary);
 
-    box-shadow:0 0 0 4px rgba(37,99,235,0.1);
-}
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
 
-/* =========================
+        /* =========================
    TABLES
 ========================= */
 
-.table-wrapper{
+        .table-wrapper {
 
-    overflow-x:auto;
+            overflow-x: auto;
 
-    background:white;
+            background: white;
 
-    border:1px solid var(--border);
+            border: 1px solid var(--border);
 
-    border-radius:16px;
+            border-radius: 16px;
 
-    box-shadow:var(--shadow-sm);
-}
+            box-shadow: var(--shadow-sm);
+        }
 
-table{
+        table {
 
-    width:100%;
+            width: 100%;
 
-    border-collapse:collapse;
-}
+            border-collapse: collapse;
+        }
 
-thead{
+        thead {
 
-    background:#f9fafb;
-}
+            background: #f9fafb;
+        }
 
-thead th{
+        thead th {
 
-    padding:16px;
+            padding: 16px;
 
-    text-align:left;
+            text-align: left;
 
-    font-size:13px;
-    font-weight:700;
+            font-size: 13px;
+            font-weight: 700;
 
-    color:var(--text-light);
+            color: var(--text-light);
 
-    text-transform:uppercase;
-}
+            text-transform: uppercase;
+        }
 
-tbody td{
+        tbody td {
 
-    padding:16px;
+            padding: 16px;
 
-    border-top:1px solid #f1f5f9;
+            border-top: 1px solid #f1f5f9;
 
-    font-size:14px;
-}
+            font-size: 14px;
+        }
 
-tbody tr:hover{
+        tbody tr:hover {
 
-    background:#f8fafc;
-}
+            background: #f8fafc;
+        }
 
-/* =========================
+        /* =========================
    BADGES
 ========================= */
 
-.badge{
+        .badge {
 
-    display:inline-flex;
+            display: inline-flex;
 
-    align-items:center;
+            align-items: center;
 
-    padding:6px 12px;
+            padding: 6px 12px;
 
-    border-radius:999px;
+            border-radius: 999px;
 
-    font-size:12px;
-    font-weight:600;
-}
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-.badge-success{
+        .badge-success {
 
-    background:#dcfce7;
-    color:#166534;
-}
+            background: #dcfce7;
+            color: #166534;
+        }
 
-.badge-warning{
+        .badge-warning {
 
-    background:#fef3c7;
-    color:#92400e;
-}
+            background: #fef3c7;
+            color: #92400e;
+        }
 
-.badge-danger{
+        .badge-danger {
 
-    background:#fee2e2;
-    color:#991b1b;
-}
+            background: #fee2e2;
+            color: #991b1b;
+        }
 
-.badge-info{
+        .badge-info {
 
-    background:#dbeafe;
-    color:#1d4ed8;
-}
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
 
-/* =========================
+        /* =========================
    ALERTS
 ========================= */
 
-.alert{
+        .alert {
 
-    padding:16px 18px;
+            padding: 16px 18px;
 
-    border-radius:12px;
+            border-radius: 12px;
 
-    margin-bottom:20px;
+            margin-bottom: 20px;
 
-    font-size:14px;
-    font-weight:500;
-}
+            font-size: 14px;
+            font-weight: 500;
+        }
 
-.alert-success{
+        .alert-success {
 
-    background:#ecfdf5;
-    color:#065f46;
+            background: #ecfdf5;
+            color: #065f46;
 
-    border:1px solid #a7f3d0;
-}
+            border: 1px solid #a7f3d0;
+        }
 
-.alert-error{
+        .alert-error {
 
-    background:#fef2f2;
-    color:#991b1b;
+            background: #fef2f2;
+            color: #991b1b;
 
-    border:1px solid #fecaca;
-}
+            border: 1px solid #fecaca;
+        }
 
-/* =========================
+        /* =========================
    FOOTER
 ========================= */
 
-footer{
+        footer {
 
-    background:white;
+            background: white;
 
-    border-top:1px solid var(--border);
+            border-top: 1px solid var(--border);
 
-    text-align:center;
+            text-align: center;
 
-    padding:20px;
+            padding: 20px;
 
-    font-size:14px;
+            font-size: 14px;
 
-    color:var(--text-light);
-}
+            color: var(--text-light);
+        }
 
-/* =========================
+        /* =========================
    RESPONSIVE
 ========================= */
 
-@media(max-width:992px){
+        @media(max-width:992px) {
 
-    .grid-4{
-        grid-template-columns:repeat(2,1fr);
-    }
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
 
-    .grid-3{
-        grid-template-columns:repeat(2,1fr);
-    }
-}
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
 
-@media(max-width:768px){
+        @media(max-width:768px) {
 
-    .navbar{
+            .navbar {
 
-        padding:0 20px;
+                padding: 0 20px;
 
-        flex-direction:column;
+                flex-direction: column;
 
-        height:auto;
+                height: auto;
 
-        padding-top:18px;
-        padding-bottom:18px;
+                padding-top: 18px;
+                padding-bottom: 18px;
 
-        gap:16px;
-    }
+                gap: 16px;
+            }
 
-    .container{
-        padding:24px;
-    }
+            .container {
+                padding: 24px;
+            }
 
-    .grid-2,
-    .grid-3,
-    .grid-4{
+            .grid-2,
+            .grid-3,
+            .grid-4 {
 
-        grid-template-columns:1fr;
-    }
+                grid-template-columns: 1fr;
+            }
 
-    .page-title{
-        font-size:24px;
-    }
-}
+            .page-title {
+                font-size: 24px;
+            }
+        }
 
-@media(max-width:480px){
+        @media(max-width:480px) {
 
-    .nav-links{
+            .nav-links {
 
-        flex-wrap:wrap;
-        justify-content:center;
-    }
+                flex-wrap: wrap;
+                justify-content: center;
+            }
 
-    .container{
-        padding:18px;
-    }
-}
-
-</style>
+            .container {
+                padding: 18px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- =========================
+    <!-- =========================
      NAVBAR
 ========================= -->
 
-<nav class="navbar">
+    <nav class="navbar">
 
-    <a href="{% url 'home' %}" class="logo">
+        <a href="{% url 'home' %}" class="logo">
+            <div class="logo-box">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+            </div>
+            <div class="logo-text">
+                Seva <span>Bandhu</span>
+            </div>
+        </a>
 
-        <div class="logo-box">
-            SB
+        <ul class="nav-links">
+            <li>
+                <a href="{% url 'home' %}">
+                    Home
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'service_selection' %}">
+                    Services
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'customer_signup' %}">
+                    Customer
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'technician_signup' %}">
+                    Technician
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-actions">
+            <a href="{% url 'admin_login' %}" class="nav-btn-admin">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                Admin
+            </a>
+            <a href="{% url 'service_selection' %}" class="nav-btn-cta">
+                Book Service
+            </a>
         </div>
 
-        <div class="logo-text">
-            Seva <span>Bandhu</span>
-        </div>
+    </nav>
 
-    </a>
-
-    <ul class="nav-links">
-
-        <li>
-            <a href="{% url 'home' %}">
-                Home
-            </a>
-        </li>
-
-        <li>
-            <a href="{% url 'customer_signup' %}">
-                Customer
-            </a>
-        </li>
-
-        <li>
-            <a href="{% url 'technician_signup' %}">
-                Technician
-            </a>
-        </li>
-
-    </ul>
-
-</nav>
-
-<!-- =========================
+    <!-- =========================
      MAIN CONTENT
 ========================= -->
 
-<div class="container">
+    <div class="container">
 
-    {% block content %}
-    {% endblock %}
+        {% block content %}
+        {% endblock %}
 
-</div>
+    </div>
 
-<!-- =========================
+    <!-- =========================
      FOOTER
 ========================= -->
 
-<footer>
+    <footer>
 
-    © 2026 Seva Bandhu | Technician Service Assigning System
+        © 2026 Seva Bandhu | Technician Service Assigning System
 
-</footer>
+    </footer>
 
 </body>
+
 </html>
