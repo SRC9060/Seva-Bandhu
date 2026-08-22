@@ -15,8 +15,10 @@ from django.contrib.auth.password_validation import validate_password
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.views.decorators.csrf import csrf_exempt
-# pyrefly: ignore [missing-import]
-from xhtml2pdf import pisa
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    pisa = None
 import json
 import random
 import uuid
@@ -46,30 +48,56 @@ def base(request):
     return render(request, 'base.html')
 
 
+from django.http import JsonResponse
+
+def technician_api_notifications(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+    
+    technician = Technician_signup.objects.filter(username__iexact=request.user.username.strip()).first()
+    if not technician:
+        return JsonResponse({'status': 'error', 'message': 'Technician not found'}, status=404)
+        
+    notifications = TechnicianNotification.objects.filter(technician=technician, is_read=False)
+    data = []
+    for n in notifications:
+        data.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'request_id': n.service_request.id,
+            'service_category': technician.service_category,
+            'priority': n.service_request.service_detail.priority,
+            'city': n.service_request.service_address.city,
+            'preferred_date': str(n.service_request.service_detail.preferred_service_date),
+            'preferred_time': n.service_request.service_detail.preferred_time_slot,
+        })
+    return JsonResponse({'status': 'success', 'notifications': data})
+
 def technician_dashboard(request):
     if not request.user.is_authenticated:
         return redirect('technician_login')
     
     try:
-        # ✅ FIX: always fetch technician using username (same as assignment logic)
+        # [ICON] FIX: always fetch technician using username (same as assignment logic)
         technician = Technician_signup.objects.filter(
             username__iexact=request.user.username.strip()
         ).first()
 
         if not technician:
-            print("❌ Technician not found for:", request.user.username)
+            print("[ICON] Technician not found for:", request.user.username)
             return redirect('technician_login')
 
     except Exception as e:
-        print("❌ ERROR:", str(e))
+        print("[ICON] ERROR:", str(e))
         return redirect('technician_login')
     
-    # ✅ Fetch only jobs assigned to THIS technician
+    # [ICON] Fetch only jobs assigned to THIS technician
     assigned_jobs = ServiceRequest.objects.filter(
         technician_username__iexact=technician.username
     ).order_by('-created_at')
     
-    # ✅ Correct job counts
+    # [ICON] Correct job counts
     total_jobs = assigned_jobs.count()
     assigned_jobs_count = assigned_jobs.filter(status='Assigned').count()
     in_progress_jobs = assigned_jobs.filter(status='In Progress').count()
@@ -97,7 +125,7 @@ def technician_my_jobs(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:
+    except Technician_signup.DoesNotExist:  # type: ignore
         return render(request, 'technician/my_job.html', {
             'error': 'Technician profile not found.'
         })
@@ -125,7 +153,7 @@ def technician_update_status(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:
+    except Technician_signup.DoesNotExist:  # type: ignore
         return render(request, 'technician/update_status.html', {
             'error': 'Technician profile not found.'
         })
@@ -140,11 +168,11 @@ def technician_update_status(request):
                 technician_username=technician.username
             )
 
-            # 🔥 UPDATE JOB STATUS
+            # [FIRE] UPDATE JOB STATUS
             job.status = new_status
             job.save()
 
-            # 🔥 MAIN FIX — HANDLE AVAILABILITY
+            # [FIRE] MAIN FIX — HANDLE AVAILABILITY
             if new_status == "Completed":
                 if job.payment_method == 'offline' and job.payment_status == 'pending':
                     job.payment_status = 'paid'
@@ -152,11 +180,11 @@ def technician_update_status(request):
                     try:
                         send_invoice_email(job)
                     except Exception as e:
-                        print("❌ Invoice email failed:", str(e))
+                        print("[ICON] Invoice email failed:", str(e))
 
                 technician.is_available = True
                 technician.save()
-                print("✅ Technician is now AVAILABLE")
+                print("[ICON] Technician is now AVAILABLE")
 
             elif new_status == "In Progress":
                 technician.is_available = False
@@ -165,7 +193,7 @@ def technician_update_status(request):
 
             return redirect('technician_my_jobs')
 
-        except ServiceRequest.DoesNotExist:
+        except ServiceRequest.DoesNotExist:  # type: ignore
             return render(request, 'technician/update_status.html', {
                 'technician': technician,
                 'error': 'Job not found.'
@@ -238,9 +266,9 @@ def technician_login(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None and Technician_signup.objects.filter(user=user).exists():
-            logout(request)  # ✅ CLEAR OLD SESSION
+            logout(request)  # [ICON] CLEAR OLD SESSION
             login(request, user)
-            request.session.save()  # ✅ FORCE SAVE
+            request.session.save()  # [ICON] FORCE SAVE
 
             return redirect('technician_dashboard')
 
@@ -257,7 +285,7 @@ def technician_logout(request):
     return redirect('technician_login')
 
 
-from .models import Service  # 🔥 IMPORTANT
+from .models import Service  # [FIRE] IMPORTANT
 
 def technician_complete_profile(request):
     if not request.user.is_authenticated:
@@ -265,12 +293,12 @@ def technician_complete_profile(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:
+    except Technician_signup.DoesNotExist:  # type: ignore
         return render(request, 'technician/complete_profile.html', {
             'error': 'Technician profile not found.'
         })
     
-    # 🔥 GET SERVICES FROM DB (MAIN FIX)
+    # [FIRE] GET SERVICES FROM DB (MAIN FIX)
     services = Service.objects.filter(is_enabled=True)
 
     if request.method == "POST":
@@ -290,14 +318,14 @@ def technician_complete_profile(request):
         except Exception as e:
             return render(request, 'technician/complete_profile.html', {
                 'technician': technician,
-                'services': services,  # 🔥 KEEP THIS
+                'services': services,  # [FIRE] KEEP THIS
                 'error': f'Error updating profile: {str(e)}'
             })
     
-    # 🔥 FINAL CONTEXT (FIXED)
+    # [FIRE] FINAL CONTEXT (FIXED)
     context = {
         'technician': technician,
-        'services': services   # ✅ NEW SYSTEM
+        'services': services   # [ICON] NEW SYSTEM
     }
     
     return render(request, 'technician/complete_profile.html', context)
@@ -313,7 +341,7 @@ def customer_dashboard(request):
 
         if not customer:
            return redirect('customer_login')
-    except customer_signup.DoesNotExist:
+    except customer_signup.DoesNotExist:  # type: ignore
         return render(request, 'customer/create_request', {
             'error': 'Customer profile not found. Please complete your signup.'
         })
@@ -340,7 +368,7 @@ def customer_dashboard(request):
                 # Collect unique technicians
                 if technician not in technicians_list:
                     technicians_list.append(technician)
-            except Technician_signup.DoesNotExist:
+            except Technician_signup.DoesNotExist:  # type: ignore
                 pass
         
         requests_with_technicians.append(request_data)
@@ -376,7 +404,7 @@ def customer_create_request(request):
 
         if not customer:
             return redirect('customer_login')
-    except customer_signup.DoesNotExist:
+    except customer_signup.DoesNotExist:  # type: ignore
         return render(request, 'customer/create_request.html', {
             'error': 'Customer profile not found.'
         })   
@@ -404,6 +432,29 @@ def customer_create_request(request):
 
             customer_latitude = request.POST.get('customer_latitude') or None
             customer_longitude = request.POST.get('customer_longitude') or None
+            
+            # [FIRE] GEOCODING FALLBACK FOR MANUAL ENTRY
+            if not customer_latitude or not customer_longitude:
+                try:
+                    import requests
+                    address_query = f"{house_flat_no}, {street_area}, {city}, {pincode}"
+                    geourl = "https://nominatim.openstreetmap.org/search"
+                    headers = {'User-Agent': 'SevaBandhu/1.0'}
+                    # Try full address
+                    resp = requests.get(geourl, params={'q': address_query, 'format': 'json', 'limit': 1}, headers=headers, timeout=5)
+                    data = resp.json()
+                    if data:
+                        customer_latitude = data[0]['lat']
+                        customer_longitude = data[0]['lon']
+                    else:
+                        # Fallback to city and street
+                        resp2 = requests.get(geourl, params={'q': f"{street_area}, {city}", 'format': 'json', 'limit': 1}, headers=headers, timeout=5)
+                        data2 = resp2.json()
+                        if data2:
+                            customer_latitude = data2[0]['lat']
+                            customer_longitude = data2[0]['lon']
+                except Exception as e:
+                    print("Backend Geocoding failed:", e)
             
             # Create ServiceDetail
             service_detail = ServiceDetail.objects.create(
@@ -439,7 +490,7 @@ def customer_create_request(request):
                 payment_status='pending',
                 amount=amount
             )
-            # 🔥 CREATE NOTIFICATIONS FOR MATCHING TECHNICIANS
+            # [FIRE] CREATE NOTIFICATIONS FOR MATCHING TECHNICIANS
             matching_technicians = Technician_signup.objects.filter(
                 service_category__iexact=service_detail.service_category
             )
@@ -454,26 +505,27 @@ def customer_create_request(request):
 
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
-            print("🔥 BROADCASTING NEW REQUEST")
-            async_to_sync(channel_layer.group_send)(
-                'technicians',   # keep same group if you are using it
-                {
-                    'type': 'new_request',
-                    'content': {
+            print("[FIRE] BROADCASTING NEW REQUEST")
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    'technicians',   # keep same group if you are using it
+                    {
                         'type': 'new_request',
-                        'request_id': service_request.id,
-                        'service_category': service_detail.service_category,
-                        'city': service_address.city,
-                        'priority': service_detail.priority,
-                        'problem_description': service_detail.problem_description,
-                        'preferred_date': str(service_detail.preferred_service_date),
-                        'preferred_time': service_detail.preferred_time_slot,
-                        'address': service_address.street_area,
+                        'content': {
+                            'type': 'new_request',
+                            'request_id': service_request.id,
+                            'service_category': service_detail.service_category,
+                            'city': service_address.city,
+                            'priority': service_detail.priority,
+                            'problem_description': service_detail.problem_description,
+                            'preferred_date': str(service_detail.preferred_service_date),
+                            'preferred_time': service_detail.preferred_time_slot,
+                            'address': service_address.street_area,
+                        }
                     }
-                }
-            )
+                )
 
-            print(f"✅ New service request created and broadcasted: ID {service_request.id}")
+            print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
                 return redirect('payment_page', service_id=service_request.id)
 
@@ -499,7 +551,7 @@ def customer_my_requests(request):
 
         if not customer:
           return redirect('customer_login')
-    except customer_signup.DoesNotExist:
+    except customer_signup.DoesNotExist:  # type: ignore
         return render(request, 'customer/my_requests.html', {
             'error': 'Customer profile not found.'
         })
@@ -516,7 +568,7 @@ def customer_my_requests(request):
         if req.technician_username:  # Fetch technician for ANY status if one is assigned
             try:
                 technician = Technician_signup.objects.get(username=req.technician_username)
-            except Technician_signup.DoesNotExist:
+            except Technician_signup.DoesNotExist:  # type: ignore
                 technician = None
         # Create a dict with request and technician data
         requests_with_technician.append({
@@ -569,6 +621,8 @@ def customer_phone_verification(request):
 
 def _send_customer_verification_email(email, code):
     """Send a short email OTP. No verification links are used."""
+    if str(settings.EMAIL_BACKEND).endswith('console.EmailBackend'):
+        raise RuntimeError('Email delivery is not configured')
     send_mail(
         subject='Your Seva Bandhu verification code',
         message=(f'Your Seva Bandhu verification code is: {code}\n\n'
@@ -606,7 +660,7 @@ def customer_sign_up(request):
         return render(request, 'customer/signup.html', context)
     try:
         validate_password(password, user=User(username=username, email=email))
-        with transaction.atomic():
+        with transaction.atomic():  # type: ignore
             user = User.objects.create_user(username=username, email=email, password=password)
             customer = customer_signup.objects.create(user=user, username=username, email=email, contact=contact,
                                                        password='', email_verified=True, phone_verified=False)
@@ -615,7 +669,7 @@ def customer_sign_up(request):
         request.session.pop('verification_code_email', None)
         request.session.pop('verification_code_created_at', None)
     except ValidationError as error:
-        context['error'] = ' '.join(error.messages)
+        context['error'] = ' '.join(str(msg) for msg in error.messages)
         return render(request, 'customer/signup.html', context)
     return redirect('customer_login')
 
@@ -671,13 +725,13 @@ def service_selection(request):
     service_list = []
 
     for service in services:
-        # 🔥 check if technician available
+        # [FIRE] check if technician available
         available = Technician_signup.objects.filter(
             service_category__iexact=service.name,
             is_available=True
         ).exists()
 
-        # 🔥 final decision
+        # [FIRE] final decision
         is_active = service.is_enabled and available
 
         service_list.append({
@@ -709,20 +763,20 @@ def accept_request(request, id):
 
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:
+    except Technician_signup.DoesNotExist:  # type: ignore
         return JsonResponse({'status': 'error', 'message': 'Technician profile not found'})
 
-    with transaction.atomic():
+    with transaction.atomic():  # type: ignore
         # Lock technician row (prevents race conditions)
         technician = Technician_signup.objects.select_for_update().get(id=technician.id)
 
         service_request = get_object_or_404(ServiceRequest, id=id)
 
-        # 🔥 BLOCK if request already taken
+        # [FIRE] BLOCK if request already taken
         if service_request.status != 'Pending':
             return JsonResponse({'status': 'failed', 'message': 'Already taken'})
 
-        # 🔥 TIME CONFLICT CHECK (MAIN FIX)
+        # [FIRE] TIME CONFLICT CHECK (MAIN FIX)
         conflict = ServiceRequest.objects.filter(
             technician_username=technician.username,
             service_detail__preferred_service_date=service_request.service_detail.preferred_service_date,
@@ -739,7 +793,7 @@ def accept_request(request, id):
         # (Optional) Keep this if you still want global busy flag
         
 
-        # 🔥 ASSIGN JOB
+        # [FIRE] ASSIGN JOB
         service_request.technician_username = technician.username
         service_request.status = 'Assigned'
         service_request.save()
@@ -748,23 +802,24 @@ def accept_request(request, id):
         technician.is_available = False
         technician.save()
 
-        # 🔥 MARK NOTIFICATIONS AS READ
+        # [FIRE] MARK NOTIFICATIONS AS READ
         TechnicianNotification.objects.filter(
             service_request=service_request
         ).update(is_read=True)
 
-        # 🔥 REALTIME REMOVE NOTIFICATION
+        # [FIRE] REALTIME REMOVE NOTIFICATION
         channel_layer = get_channel_layer()
 
-        print("🔥 SENDING notification_removed EVENT")
+        print("[FIRE] SENDING notification_removed EVENT")
 
-        async_to_sync(channel_layer.group_send)(
-            'technicians',
-            {
-                'type': 'notification_removed',
-                'request_id': service_request.id,
-            }
-        )
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                'technicians',
+                {
+                    'type': 'notification_removed',
+                    'request_id': service_request.id,
+                }
+            )
 
     return JsonResponse({'status': 'success'})
 
@@ -786,7 +841,7 @@ def dismiss_notification(request, id):
             'status': 'success'
         })
 
-    except TechnicianNotification.DoesNotExist:
+    except TechnicianNotification.DoesNotExist:  # type: ignore
 
         return JsonResponse({
             'status': 'error'
@@ -826,13 +881,16 @@ def start_tracking(request, id):
 
 def generate_invoice_pdf(service):
     print('📄 generate_invoice_pdf called for service:', service.id)
+    if not pisa:
+        print('[ICON] xhtml2pdf is not installed, skipping PDF generation.')
+        return None
     template = get_template('customer/invoice.html')
     html = template.render({'service': service})
     result = BytesIO()
     pdf_status = pisa.CreatePDF(src=html, dest=result)
 
-    if pdf_status.err:
-        print('❌ PDF generation failed for service:', service.id, 'errors:', pdf_status.err)
+    if getattr(pdf_status, 'err', False):
+        print('[ICON] PDF generation failed for service:', service.id, 'errors:', getattr(pdf_status, 'err', None))
         return None
 
     return result.getvalue()
@@ -842,17 +900,17 @@ def send_invoice_email(service):
     print('✉️ send_invoice_email called for service:', service.id)
     customer = getattr(service, 'customer', None)
     if not customer or not hasattr(customer, 'user'):
-        print('❌ Unable to resolve customer user for service:', service.id)
+        print('[ICON] Unable to resolve customer user for service:', service.id)
         return False
 
     recipient_email = customer.user.email
     if not recipient_email:
-        print('❌ No recipient email for service:', service.id)
+        print('[ICON] No recipient email for service:', service.id)
         return False
 
     pdf_bytes = generate_invoice_pdf(service)
     if not pdf_bytes:
-        print('❌ PDF generation returned no bytes for service:', service.id)
+        print('[ICON] PDF generation returned no bytes for service:', service.id)
         return False
 
     subject = f"Seva Bandhu Invoice - Service Request #{service.id}"
@@ -873,7 +931,7 @@ def send_invoice_email(service):
     email_message.attach(f'invoice_{service.id}.pdf', pdf_bytes, 'application/pdf')
     email_message.send(fail_silently=False)
 
-    print('✅ Invoice email sent to:', recipient_email)
+    print('[ICON] Invoice email sent to:', recipient_email)
     return True
 
 
@@ -895,9 +953,10 @@ def payment_page(request, service_id):
         try:
             send_invoice_email(service_request)
         except Exception as e:
-            print('❌ Invoice email error:', str(e))
+            print('[ICON] Invoice email error:', str(e))
 
-        return redirect('customer_dashboard')
+        from django.urls import reverse
+        return redirect(reverse('customer_my_requests') + '?payment_success=true')
 
     return render(request, 'customer/payment.html', {
         'service_request': service_request
@@ -1004,8 +1063,22 @@ def customer_google_auth(request):
         "status": "failed"
 
     })
-
-@csrf_exempt
+def verify_email(request, token):
+    customer = customer_signup.objects.filter(
+        verification_token=token, email_verified=False
+    ).select_related('user').first()
+    if not customer:
+        return render(request, 'customer/verification_result.html', {
+            'success': False, 'message': 'This verification link is invalid or has already been used.'
+        })
+    customer.email_verified = True
+    customer.verification_token = None
+    customer.user.is_active = True
+    customer.user.save(update_fields=['is_active'])
+    customer.save(update_fields=['email_verified', 'verification_token'])
+    return render(request, 'customer/verification_result.html', {
+        'success': True, 'message': 'Your email is verified. You can now log in.'
+    })
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1031,7 +1104,6 @@ def verify_email_code(request):
     return JsonResponse({'status': 'success', 'message': 'Email verified.'})
 
 
-@csrf_exempt
 def send_verification_email(request):
     if request.method != "POST":
         return JsonResponse({
@@ -1063,7 +1135,6 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
-
 
 @csrf_exempt
 def customer_phone_verify_complete(request):

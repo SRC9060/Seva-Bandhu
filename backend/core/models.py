@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 
 
 class customer_signup(models.Model):
+    objects = models.Manager()
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     username = models.CharField(max_length=100)
     email = models.EmailField()
@@ -24,11 +25,12 @@ class customer_signup(models.Model):
     class Meta:
         db_table = 'customer_signup'
 
-    def __str__(self):
-        return self.username
+    def __str__(self) -> str:
+        return str(self.username)
 
 
 class Technician_signup(models.Model):
+    objects = models.Manager()
     SERVICE_CATEGORIES = [
         ('AC Service', 'AC Service'),
         ('Electrician', 'Electrician'),
@@ -52,11 +54,12 @@ class Technician_signup(models.Model):
     class Meta:
         db_table = 'Technician_signup'
 
-    def __str__(self):
-        return self.username
+    def __str__(self) -> str:
+        return str(self.username)
 
 
 class ServiceAddress(models.Model):
+    objects = models.Manager()
     house_flat_no = models.CharField(max_length=50)
     street_area = models.CharField(max_length=100)
     city = models.CharField(max_length=50)
@@ -72,6 +75,7 @@ class ServiceAddress(models.Model):
 
 
 class ServiceDetail(models.Model):
+    objects = models.Manager()
     PRIORITY_CHOICES = [
         ('Low', 'Low'),
         ('Medium', 'Medium'),
@@ -95,6 +99,7 @@ class ServiceDetail(models.Model):
 
 
 class ServiceRequest(models.Model):
+    objects = models.Manager()
     STATUS_CHOICES = [
         ('Pending', 'Pending - No Technician Assigned'),
         ('Assigned', 'Assigned - Technician Assigned'),
@@ -151,12 +156,13 @@ class ServiceRequest(models.Model):
     class Meta:
         db_table = 'ServiceRequest'
 
-    def __str__(self):
-        return f"REQ-{self.id} - {self.customer_username}"
+    def __str__(self) -> str:
+        return f"REQ-{getattr(self, 'id', '')} - {self.customer_username}"
         
 
 
 class Service(models.Model):
+     objects = models.Manager()
      name = models.CharField(max_length=100, unique=True)
      image=models.ImageField(upload_to='service_images/' , blank=True, null=True)  # ✅ Add image field
      price = models.IntegerField(default=0)
@@ -165,10 +171,11 @@ class Service(models.Model):
      class Meta:
         db_table = 'Service'
 
-     def __str__(self):
-        return self.name
+     def __str__(self) -> str:
+        return str(self.name)
 
 class TechnicianNotification(models.Model):
+    objects = models.Manager()
 
     technician = models.ForeignKey(
         Technician_signup,

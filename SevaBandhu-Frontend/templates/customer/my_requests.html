@@ -552,8 +552,7 @@
                 </div>
 
                 <div class="action-buttons-group">
-                    {% if request.status == 'In Progress' or request.status == 'Accepted' or request.status ==
-                    'Assigned' %}
+                    {% if request.status == 'In Progress' or request.status == 'Accepted' or request.status ==                     'Assigned' %}
                     <a href="{% url 'customer_tracking' request.id %}" class="btn-card-action btn-action-blue">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">

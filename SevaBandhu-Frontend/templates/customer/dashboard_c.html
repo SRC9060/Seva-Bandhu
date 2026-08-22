@@ -910,8 +910,7 @@
                                         item.request.preferred_service_date|date:"d M Y" }}</span>
                                 </td>
                                 <td>
-                                    {% if item.request.status == 'In Progress' or item.request.status == 'Accepted' or
-                                    item.request.status == 'Assigned' %}
+                                    {% if item.request.status == 'In Progress' or item.request.status == 'Accepted' or item.request.status == 'Assigned' %}
                                     <a href="{% url 'customer_tracking' item.request.id %}"
                                         class="btn-table-action btn-table-action-primary">
                                         Track

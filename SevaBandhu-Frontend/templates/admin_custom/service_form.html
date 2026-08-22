@@ -45,8 +45,7 @@
 
         <div
             style="display: flex; align-items: center; gap: 10px; margin-bottom:28px; background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e2e8f0;">
-            <input type="checkbox" id="is_enabled" name="is_enabled" {% if action=='Add' or service.is_enabled
-                %}checked{% endif %} style="width: 18px; height: 18px;">
+            <input type="checkbox" id="is_enabled" name="is_enabled" {% if action == 'Add' or service.is_enabled                 %}checked{% endif %} style="width: 18px; height: 18px;">
             <label for="is_enabled"
                 style="margin-bottom: 0; font-size:13.5px; font-weight:600; color:#0f172a; cursor:pointer;">
                 Is Active (Visible to customers for service request bookings)

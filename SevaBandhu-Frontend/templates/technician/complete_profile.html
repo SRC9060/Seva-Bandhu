@@ -201,8 +201,7 @@
                 <select id="service_category" name="service_category" required>
                     <option value="">-- Select a Service Category --</option>
                     {% for service in services %}
-                    <option value="{{ service.name }}" {% if technician.service_category==service.name %}selected{%
-                        endif %}>
+                    <option value="{{ service.name }}" {% if technician.service_category == service.name %}selected{%                         endif %}>
                         {{ service.name }}
                     </option>
                     {% endfor %}
