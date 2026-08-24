@@ -41,9 +41,10 @@ urlpatterns = [
     path('technician/start-tracking/<int:id>/', views.start_tracking, name='start_tracking'),
     path('customer/tracking/<int:id>/', views.customer_tracking, name='customer_tracking'),
     path('customer/google-auth/',views.customer_google_auth,name='customer_google_auth'),
-   path('send-verification-email/',views.send_verification_email,name='send_verification_email'),
+    path('send-verification-email/',views.send_verification_email,name='send_verification_email'),
     path('verify-email-code/', views.verify_email_code, name='verify_email_code'),
     path('customer/phone-verify-complete/', views.customer_phone_verify_complete, name='customer_phone_verify_complete'),
+    path('customer/api/chat/', views.customer_api_chat, name='customer_api_chat'),
 
     
     # --- SUPER ADMIN URLS ---
@@ -69,6 +70,8 @@ urlpatterns = [
     path('super-admin/service-addresses/', admin_views.admin_service_addresses_list, name='admin_service_addresses_list'),
     path('super-admin/service-details/', admin_views.admin_service_details_list, name='admin_service_details_list'),
     path('super-admin/technician-notifications/', admin_views.admin_notifications_list, name='admin_notifications_list'),
+    
+
 ]
 
 
