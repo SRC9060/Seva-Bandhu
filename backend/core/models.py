@@ -20,12 +20,15 @@ class customer_signup(models.Model):
     blank=True,
     null=True
 )
+    wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    objects = models.Manager()
 
     class Meta:
         db_table = 'customer_signup'
 
     def __str__(self):
-        return self.username
+        return str(self.username)
 
 
 class Technician_signup(models.Model):
@@ -49,11 +52,13 @@ class Technician_signup(models.Model):
     working_locations = models.CharField(max_length=500, blank=True, null=True)  # Comma-separated cities
     profile_completed = models.BooleanField(default=False)
 
+    objects = models.Manager()
+
     class Meta:
         db_table = 'Technician_signup'
 
     def __str__(self):
-        return self.username
+        return str(self.username)
 
 
 class ServiceAddress(models.Model):
@@ -63,6 +68,8 @@ class ServiceAddress(models.Model):
     pincode = models.CharField(max_length=10)
     additional_landmark = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
 
     class Meta:
         db_table = 'ServiceAddress'
@@ -86,6 +93,8 @@ class ServiceDetail(models.Model):
     preferred_time_slot = models.CharField(max_length=50)
     contact_number = models.CharField(max_length=15)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
 
     class Meta:
         db_table = 'ServiceDetail'
@@ -148,11 +157,13 @@ class ServiceRequest(models.Model):
             return None
         return Technician_signup.objects.filter(username=self.technician_username).select_related('user').first()
 
+    objects = models.Manager()
+
     class Meta:
         db_table = 'ServiceRequest'
 
     def __str__(self):
-        return f"REQ-{self.id} - {self.customer_username}"
+        return f"REQ-{self.pk} - {self.customer_username}"
         
 
 
@@ -162,11 +173,13 @@ class Service(models.Model):
      price = models.IntegerField(default=0)
      is_enabled = models.BooleanField(default=True)  # ✅ Admin control
 
+     objects = models.Manager()
+
      class Meta:
         db_table = 'Service'
 
      def __str__(self):
-        return self.name
+        return str(self.name)
 
 class TechnicianNotification(models.Model):
 
@@ -186,6 +199,8 @@ class TechnicianNotification(models.Model):
 
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
 
     class Meta:
         ordering = ['-created_at']
@@ -213,9 +228,31 @@ class SupportTicket(models.Model):
     action_taken = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects = models.Manager()
+
     class Meta:
         db_table = 'SupportTicket'
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.ticket_type} - {self.customer.username} ({self.status})"
+
+class WalletTransaction(models.Model):
+    TRANSACTION_TYPES = (
+        ('CREDIT', 'Credit'),
+        ('DEBIT', 'Debit')
+    )
+    customer = models.ForeignKey(customer_signup, on_delete=models.CASCADE, related_name='wallet_transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    description = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = 'WalletTransaction'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_type} of ₹{self.amount} for {self.customer.username}"

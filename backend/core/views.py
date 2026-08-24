@@ -15,10 +15,7 @@ from django.contrib.auth.password_validation import validate_password
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.views.decorators.csrf import csrf_exempt
-try:
-    from xhtml2pdf import pisa
-except ImportError:
-    pisa = None
+from xhtml2pdf import pisa
 import json
 import random
 import uuid
@@ -34,7 +31,6 @@ from .models import (
     ServiceDetail,
     ServiceAddress,
     Service,
-    SupportTicket,
 )
 
 def home(request):
@@ -126,7 +122,7 @@ def technician_my_jobs(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:  # type: ignore
+    except Technician_signup.DoesNotExist:
         return render(request, 'technician/my_job.html', {
             'error': 'Technician profile not found.'
         })
@@ -154,7 +150,7 @@ def technician_update_status(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:  # type: ignore
+    except Technician_signup.DoesNotExist:
         return render(request, 'technician/update_status.html', {
             'error': 'Technician profile not found.'
         })
@@ -194,7 +190,7 @@ def technician_update_status(request):
 
             return redirect('technician_my_jobs')
 
-        except ServiceRequest.DoesNotExist:  # type: ignore
+        except ServiceRequest.DoesNotExist:
             return render(request, 'technician/update_status.html', {
                 'technician': technician,
                 'error': 'Job not found.'
@@ -294,7 +290,7 @@ def technician_complete_profile(request):
     
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:  # type: ignore
+    except Technician_signup.DoesNotExist:
         return render(request, 'technician/complete_profile.html', {
             'error': 'Technician profile not found.'
         })
@@ -342,7 +338,7 @@ def customer_dashboard(request):
 
         if not customer:
            return redirect('customer_login')
-    except customer_signup.DoesNotExist:  # type: ignore
+    except customer_signup.DoesNotExist:
         return render(request, 'customer/create_request', {
             'error': 'Customer profile not found. Please complete your signup.'
         })
@@ -369,7 +365,7 @@ def customer_dashboard(request):
                 # Collect unique technicians
                 if technician not in technicians_list:
                     technicians_list.append(technician)
-            except Technician_signup.DoesNotExist:  # type: ignore
+            except Technician_signup.DoesNotExist:
                 pass
         
         requests_with_technicians.append(request_data)
@@ -383,6 +379,9 @@ def customer_dashboard(request):
     # Get recent requests (last 5)
     recent_requests = requests_with_technicians[:5]
     
+    from core.models import SupportTicket
+    support_tickets = SupportTicket.objects.filter(customer=customer).order_by('-created_at')
+
     context = {
         'customer': customer,
         'service_requests': recent_requests,
@@ -391,6 +390,7 @@ def customer_dashboard(request):
         'pending_requests': pending_requests,
         'in_progress_requests': in_progress_requests,
         'completed_requests': completed_requests,
+        'support_tickets': support_tickets,
     }
     
     return render(request, 'customer/dashboard_c.html', context)
@@ -405,7 +405,7 @@ def customer_create_request(request):
 
         if not customer:
             return redirect('customer_login')
-    except customer_signup.DoesNotExist:  # type: ignore
+    except customer_signup.DoesNotExist:
         return render(request, 'customer/create_request.html', {
             'error': 'Customer profile not found.'
         })   
@@ -507,24 +507,23 @@ def customer_create_request(request):
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
             print("[FIRE] BROADCASTING NEW REQUEST")
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    'technicians',   # keep same group if you are using it
-                    {
+            async_to_sync(channel_layer.group_send)(
+                'technicians',   # keep same group if you are using it
+                {
+                    'type': 'new_request',
+                    'content': {
                         'type': 'new_request',
-                        'content': {
-                            'type': 'new_request',
-                            'request_id': service_request.id,
-                            'service_category': service_detail.service_category,
-                            'city': service_address.city,
-                            'priority': service_detail.priority,
-                            'problem_description': service_detail.problem_description,
-                            'preferred_date': str(service_detail.preferred_service_date),
-                            'preferred_time': service_detail.preferred_time_slot,
-                            'address': service_address.street_area,
-                        }
+                        'request_id': service_request.id,
+                        'service_category': service_detail.service_category,
+                        'city': service_address.city,
+                        'priority': service_detail.priority,
+                        'problem_description': service_detail.problem_description,
+                        'preferred_date': str(service_detail.preferred_service_date),
+                        'preferred_time': service_detail.preferred_time_slot,
+                        'address': service_address.street_area,
                     }
-                )
+                }
+            )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -552,7 +551,7 @@ def customer_my_requests(request):
 
         if not customer:
           return redirect('customer_login')
-    except customer_signup.DoesNotExist:  # type: ignore
+    except customer_signup.DoesNotExist:
         return render(request, 'customer/my_requests.html', {
             'error': 'Customer profile not found.'
         })
@@ -569,7 +568,7 @@ def customer_my_requests(request):
         if req.technician_username:  # Fetch technician for ANY status if one is assigned
             try:
                 technician = Technician_signup.objects.get(username=req.technician_username)
-            except Technician_signup.DoesNotExist:  # type: ignore
+            except Technician_signup.DoesNotExist:
                 technician = None
         # Create a dict with request and technician data
         requests_with_technician.append({
@@ -583,6 +582,68 @@ def customer_my_requests(request):
     }
     
     return render(request, 'customer/my_requests.html', context)
+
+
+def customer_support_tickets(request):
+    if not request.user.is_authenticated:
+        return redirect('customer_login')
+    
+    try:
+        customer = customer_signup.objects.filter(user=request.user).first()
+        if not customer:
+            return redirect('customer_login')
+    except customer_signup.DoesNotExist:
+        return redirect('customer_login')
+        
+    from core.models import SupportTicket
+    support_tickets = SupportTicket.objects.filter(customer=customer).order_by('-created_at')
+
+    context = {
+        'customer': customer,
+        'support_tickets': support_tickets,
+    }
+    
+    return render(request, 'customer/support_tickets_c.html', context)
+
+def customer_wallet(request):
+    if not request.user.is_authenticated:
+        return redirect('customer_login')
+    
+    try:
+        customer = customer_signup.objects.filter(user=request.user).first()
+        if not customer:
+            return redirect('customer_login')
+    except customer_signup.DoesNotExist:
+        return redirect('customer_login')
+
+    from core.models import WalletTransaction
+    from decimal import Decimal
+
+    if request.method == "POST":
+        amount_str = request.POST.get('amount', '0')
+        try:
+            amount = Decimal(amount_str)
+            if amount > 0:
+                customer.wallet_balance += amount
+                customer.save()
+                
+                WalletTransaction.objects.create(
+                    customer=customer,
+                    amount=amount,
+                    transaction_type='CREDIT',
+                    description='Self Top-Up (Added via Online Payment)'
+                )
+        except:
+            pass
+        return redirect('customer_wallet')
+
+    transactions = WalletTransaction.objects.filter(customer=customer)
+    
+    context = {
+        'customer': customer,
+        'transactions': transactions,
+    }
+    return render(request, 'customer/wallet.html', context)
 
 
 def customer_track_request(request):
@@ -622,7 +683,7 @@ def customer_phone_verification(request):
 
 def _send_customer_verification_email(email, code):
     """Send a short email OTP. No verification links are used."""
-    if str(settings.EMAIL_BACKEND).endswith('console.EmailBackend'):
+    if settings.EMAIL_BACKEND.endswith('console.EmailBackend'):
         raise RuntimeError('Email delivery is not configured')
     send_mail(
         subject='Your Seva Bandhu verification code',
@@ -661,7 +722,7 @@ def customer_sign_up(request):
         return render(request, 'customer/signup.html', context)
     try:
         validate_password(password, user=User(username=username, email=email))
-        with transaction.atomic():  # type: ignore
+        with transaction.atomic():
             user = User.objects.create_user(username=username, email=email, password=password)
             customer = customer_signup.objects.create(user=user, username=username, email=email, contact=contact,
                                                        password='', email_verified=True, phone_verified=False)
@@ -670,7 +731,7 @@ def customer_sign_up(request):
         request.session.pop('verification_code_email', None)
         request.session.pop('verification_code_created_at', None)
     except ValidationError as error:
-        context['error'] = ' '.join(str(msg) for msg in error.messages)
+        context['error'] = ' '.join(error.messages)
         return render(request, 'customer/signup.html', context)
     return redirect('customer_login')
 
@@ -764,10 +825,10 @@ def accept_request(request, id):
 
     try:
         technician = Technician_signup.objects.get(user=request.user)
-    except Technician_signup.DoesNotExist:  # type: ignore
+    except Technician_signup.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Technician profile not found'})
 
-    with transaction.atomic():  # type: ignore
+    with transaction.atomic():
         # Lock technician row (prevents race conditions)
         technician = Technician_signup.objects.select_for_update().get(id=technician.id)
 
@@ -813,14 +874,13 @@ def accept_request(request, id):
 
         print("[FIRE] SENDING notification_removed EVENT")
 
-        if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                'technicians',
-                {
-                    'type': 'notification_removed',
-                    'request_id': service_request.id,
-                }
-            )
+        async_to_sync(channel_layer.group_send)(
+            'technicians',
+            {
+                'type': 'notification_removed',
+                'request_id': service_request.id,
+            }
+        )
 
     return JsonResponse({'status': 'success'})
 
@@ -842,7 +902,7 @@ def dismiss_notification(request, id):
             'status': 'success'
         })
 
-    except TechnicianNotification.DoesNotExist:  # type: ignore
+    except TechnicianNotification.DoesNotExist:
 
         return JsonResponse({
             'status': 'error'
@@ -882,16 +942,13 @@ def start_tracking(request, id):
 
 def generate_invoice_pdf(service):
     print('📄 generate_invoice_pdf called for service:', service.id)
-    if not pisa:
-        print('[ICON] xhtml2pdf is not installed, skipping PDF generation.')
-        return None
     template = get_template('customer/invoice.html')
     html = template.render({'service': service})
     result = BytesIO()
     pdf_status = pisa.CreatePDF(src=html, dest=result)
 
-    if getattr(pdf_status, 'err', False):
-        print('[ICON] PDF generation failed for service:', service.id, 'errors:', getattr(pdf_status, 'err', None))
+    if pdf_status.err:
+        print('[ICON] PDF generation failed for service:', service.id, 'errors:', pdf_status.err)
         return None
 
     return result.getvalue()
@@ -941,11 +998,33 @@ def payment_page(request, service_id):
 
     if not request.user.is_authenticated or request.user.username != service_request.customer_username:
         return redirect('customer_login')
+    try:
+        customer = customer_signup.objects.filter(user=request.user).first()
+    except customer_signup.DoesNotExist:
+        customer = None
 
     if request.method == "POST":
         print('🔔 payment_page POST request triggered for service:', service_request.id)
         if service_request.payment_method != 'online':
             return HttpResponseForbidden('Only online payments can be processed here.')
+
+        payment_method_choice = request.POST.get('payment_method_choice', 'online')
+        
+        if payment_method_choice == 'wallet':
+            if not customer or customer.wallet_balance < service_request.amount:
+                return HttpResponseForbidden('Insufficient wallet balance.')
+            
+            # Deduct from wallet
+            from core.models import WalletTransaction
+            customer.wallet_balance -= service_request.amount
+            customer.save()
+            
+            WalletTransaction.objects.create(
+                customer=customer,
+                amount=service_request.amount,
+                transaction_type='DEBIT',
+                description=f'Payment for Booking #REQ-{service_request.id}'
+            )
 
         service_request.payment_status = 'paid'
         service_request.save()
@@ -960,7 +1039,8 @@ def payment_page(request, service_id):
         return redirect(reverse('customer_my_requests') + '?payment_success=true')
 
     return render(request, 'customer/payment.html', {
-        'service_request': service_request
+        'service_request': service_request,
+        'customer': customer
     })
 
 
@@ -1080,6 +1160,7 @@ def verify_email(request, token):
     return render(request, 'customer/verification_result.html', {
         'success': True, 'message': 'Your email is verified. You can now log in.'
     })
+
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1136,6 +1217,9 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
+
+
+
 
 @csrf_exempt
 def customer_phone_verify_complete(request):
@@ -1215,39 +1299,26 @@ def customer_api_chat(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
-
-def customer_support_tickets(request):
-    if not request.user.is_authenticated:
-        return redirect('customer_login')
-    
-    try:
-        customer = customer_signup.objects.filter(user=request.user).first()
-        if not customer:
-            return redirect('customer_login')
-    except Exception:
-        return redirect('customer_login')
-        
-    from core.models import SupportTicket
-    tickets = SupportTicket.objects.filter(customer=customer).order_by('-created_at')
-    return render(request, 'customer/support_tickets_c.html', {'support_tickets': tickets})
-
 @csrf_exempt
 def customer_api_create_ticket(request):
-    if request.method == "POST":
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+    
+    try:
+        customer = customer_signup.objects.get(user=request.user)
+    except customer_signup.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Customer not found'}, status=404)
+
+    if request.method == 'POST':
         try:
-            import json
             data = json.loads(request.body)
             ticket_type = data.get('ticket_type')
             description = data.get('description')
             technician_name = data.get('technician_name', '')
             service_request_id = data.get('service_request_id', '')
 
-            if not request.user.is_authenticated:
-                return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=401)
-                
-            customer = customer_signup.objects.filter(user=request.user).first()
-            if not customer:
-                return JsonResponse({'status': 'error', 'message': 'Customer not found'}, status=404)
+            if not ticket_type or not description:
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
             
             from core.models import SupportTicket
             SupportTicket.objects.create(
@@ -1255,27 +1326,10 @@ def customer_api_create_ticket(request):
                 ticket_type=ticket_type,
                 description=description,
                 technician_name=technician_name,
-                service_request_id=service_request_id,
-                status='Open'
+                service_request_id=service_request_id
             )
-            return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'success', 'message': 'Ticket created successfully'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
-def customer_support_tickets(request):
-    if not request.user.is_authenticated:
-        return redirect('customer_login')
-        
-    try:
-        customer = customer_signup.objects.get(user=request.user)
-    except customer_signup.DoesNotExist:
-        return redirect('customer_login')
-
-    tickets = SupportTicket.objects.filter(customer=customer).order_by('-created_at')
     
-    context = {
-        'tickets': tickets,
-        'customer': customer
-    }
-    return render(request, 'customer/support_tickets.html', context)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)

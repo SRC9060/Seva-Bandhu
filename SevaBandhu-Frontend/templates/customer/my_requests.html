@@ -450,26 +450,26 @@
     {% if service_requests %}
     <div class="requests-grid-list">
         {% for item in service_requests %}
-        {% with request=item.request technician=item.technician %}
+        {% with req=item.request technician=item.technician %}
         <div class="request-item-card">
 
             <!-- Top Header -->
             <div class="card-top-bar">
                 <div>
-                    <span class="req-id-badge">#REQ-{{ request.id }}</span>
-                    <span class="req-category-title">{{ request.service_detail.service_category }}</span>
+                    <span class="req-id-badge">#REQ-{{ req.id }}</span>
+                    <span class="req-category-title">{{ req.service_detail.service_category }}</span>
                 </div>
 
-                {% if request.status == 'Pending' %}
+                {% if req.status == 'Pending' %}
                 <span class="status-tag-pill tag-pending">Pending Dispatch</span>
-                {% elif request.status == 'Accepted' or request.status == 'Assigned' %}
+                {% elif req.status == 'Accepted' or req.status == 'Assigned' %}
                 <span class="status-tag-pill tag-assigned">Tech Assigned</span>
-                {% elif request.status == 'In Progress' %}
+                {% elif req.status == 'In Progress' %}
                 <span class="status-tag-pill tag-progress">In Progress</span>
-                {% elif request.status == 'Completed' %}
+                {% elif req.status == 'Completed' %}
                 <span class="status-tag-pill tag-completed">Completed</span>
                 {% else %}
-                <span class="status-tag-pill tag-cancelled">{{ request.status }}</span>
+                <span class="status-tag-pill tag-cancelled">{{ req.status }}</span>
                 {% endif %}
             </div>
 
@@ -486,19 +486,19 @@
                     </h4>
                     <div class="info-data-row">
                         <span class="data-label">Description</span>
-                        <span class="data-val">{{ request.service_detail.problem_description|truncatewords:8 }}</span>
+                        <span class="data-val">{{ req.service_detail.problem_description|truncatewords:8 }}</span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">Preferred Date</span>
-                        <span class="data-val">{{ request.service_detail.preferred_service_date|date:"d M, Y" }}</span>
+                        <span class="data-val">{{ req.service_detail.preferred_service_date|date:"d M, Y" }}</span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">Time Slot</span>
-                        <span class="data-val">{{ request.service_detail.preferred_time_slot }}</span>
+                        <span class="data-val">{{ req.service_detail.preferred_time_slot }}</span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">Priority Level</span>
-                        <span class="data-val">{{ request.service_detail.priority }}</span>
+                        <span class="data-val">{{ req.service_detail.priority }}</span>
                     </div>
                 </div>
 
@@ -513,25 +513,25 @@
                     </h4>
                     <div class="info-data-row">
                         <span class="data-label">Total Amount</span>
-                        <span class="data-val" style="font-weight:700;">₹{{ request.amount|default:"0.00" }}</span>
+                        <span class="data-val" style="font-weight:700;">₹{{ req.amount|default:"0.00" }}</span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">Payment Mode</span>
-                        <span class="data-val">{{ request.payment_method|capfirst|default:"Offline" }}</span>
+                        <span class="data-val">{{ req.payment_method|capfirst|default:"Offline" }}</span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">Payment Status</span>
                         <span class="data-val">
-                            {% if request.payment_status == 'paid' %}
-                            <span style="color:#16a34a;">{{ request.payment_status|capfirst }}</span>
+                            {% if req.payment_status == 'paid' %}
+                            <span style="color:#16a34a;">{{ req.payment_status|capfirst }}</span>
                             {% else %}
-                            {{ request.payment_status|capfirst }}
+                            {{ req.payment_status|capfirst }}
                             {% endif %}
                         </span>
                     </div>
                     <div class="info-data-row">
                         <span class="data-label">City</span>
-                        <span class="data-val">{{ request.service_address.city }}</span>
+                        <span class="data-val">{{ req.service_address.city }}</span>
                     </div>
                 </div>
             </div>
@@ -554,8 +554,8 @@
                 </div>
 
                 <div class="action-buttons-group">
-                    {% if request.status == 'In Progress' or request.status == 'Accepted' or request.status == 'Assigned' %}
-                    <a href="{% url 'customer_tracking' request.id %}" class="btn-card-action btn-action-blue">
+                    {% if req.status == 'In Progress' or req.status == 'Accepted' or req.status == 'Assigned' %}
+                    <a href="{% url 'customer_tracking' req.id %}" class="btn-card-action btn-action-blue">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
@@ -565,14 +565,14 @@
                     </a>
                     {% endif %}
 
-                    {% if request.payment_method == 'online' and request.payment_status == 'pending' %}
-                    <a href="{% url 'payment_page' request.id %}" class="btn-card-action btn-action-blue">
+                    {% if req.payment_method == 'online' and req.payment_status == 'pending' %}
+                    <a href="{% url 'payment_page' req.id %}" class="btn-card-action btn-action-blue">
                         Pay Now
                     </a>
                     {% endif %}
 
-                    {% if request.payment_status == 'paid' or request.status == 'Completed' %}
-                    <a href="{% url 'invoice_pdf' request.id %}" target="_blank"
+                    {% if req.payment_status == 'paid' or req.status == 'Completed' %}
+                    <a href="{% url 'invoice_pdf' req.id %}" target="_blank"
                         class="btn-card-action btn-action-gray">
                         PDF Invoice
                     </a>
