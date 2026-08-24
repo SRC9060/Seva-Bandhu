@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+    .tickets-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+        font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        color: #0f172a;
+        background-color: #f8fafc;
+    }
+
+    .ticket-header-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 28px 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        margin-bottom: 28px;
+    }
+
+    .ticket-header-card h1 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0 0 4px 0;
+    }
+
+    .ticket-header-card p {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .tickets-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .ticket-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s ease;
+    }
+
+    .ticket-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+
+    .ticket-top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 18px;
+    }
+
+    .ticket-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 19px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .ticket-id-badge {
+        font-family: ui-monospace, monospace;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #2563eb;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-right: 8px;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-open {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-resolved {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .details-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 20px;
+    }
+    
+    .details-box h4 {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 12px 0;
+    }
+    
+    .info-row {
+        margin-bottom: 12px;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-label {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 4px;
+        display: block;
+    }
+    
+    .info-value {
+        font-size: 14px;
+        color: #0f172a;
+        line-height: 1.5;
+    }
+    
+    .admin-response-container {
+        margin-top: 24px;
+        position: relative;
+    }
+    
+    .admin-response-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .admin-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+    }
+
+    .admin-title {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .admin-response-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0 16px 16px 16px;
+        padding: 16px 20px;
+        color: #334155;
+        font-size: 14.5px;
+        line-height: 1.6;
+        position: relative;
+        margin-left: 16px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Handle the [Action] prefix in text via JS */
+    .admin-action-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        border: 1px solid #bfdbfe;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+    }
+    
+    .empty-state h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+    
+    .empty-state p {
+        color: #64748b;
+        font-size: 14px;
+    }
+</style>
+
+<div class="tickets-wrapper">
+    <div class="ticket-header-card">
+        <h1>My Support Tickets</h1>
+        <p>Track your complaints, refunds, and queries.</p>
+    </div>
+
+    {% if tickets %}
+    <div class="tickets-grid">
+        {% for ticket in tickets %}
+        <div class="ticket-card">
+            <div class="ticket-top-bar">
+                <div>
+                    <span class="ticket-id-badge">#TKT-{{ ticket.id }}</span>
+                    <span class="ticket-title">{{ ticket.ticket_type }}</span>
+                </div>
+                {% if ticket.status == 'Open' %}
+                <span class="status-badge status-open">Open</span>
+                {% else %}
+                <span class="status-badge status-resolved">Resolved</span>
+                {% endif %}
+            </div>
+
+            <div class="details-box">
+                <h4>Ticket Details</h4>
+                <div class="info-row">
+                    <span class="info-label">Submitted On</span>
+                    <span class="info-value">{{ ticket.created_at|date:"d M, Y h:i A" }}</span>
+                </div>
+                {% if ticket.service_request_id %}
+                <div class="info-row">
+                    <span class="info-label">Related Request</span>
+                    <span class="info-value">#REQ-{{ ticket.service_request_id }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-label">Description</span>
+                    <span class="info-value">{{ ticket.description }}</span>
+                </div>
+            </div>
+
+            {% if ticket.action_taken %}
+            <div class="admin-response-container">
+                <div class="admin-response-header">
+                    <div class="admin-avatar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <span class="admin-title">Support Team</span>
+                </div>
+                <div class="admin-response-box">
+                    <div class="admin-response-text">{{ ticket.action_taken }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h3>No Tickets Found</h3>
+        <p>You haven't raised any support tickets yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const responseTexts = document.querySelectorAll('.admin-response-text');
+        responseTexts.forEach(el => {
+            let text = el.textContent.trim();
+            // Look for [Something] at the start
+            const match = text.match(/^\[(.*?)\](.*)/s);
+            if (match) {
+                const rawTag = match[1].trim();
+                const rest = match[2].trim();
+                
+                let displayTag = rawTag;
+                if (rawTag === 'Send Apology Email') displayTag = 'Apology Email Sent';
+                else if (rawTag.includes('Refund')) displayTag = 'Refund Processed';
+                else if (rawTag.includes('Technician')) displayTag = 'Technician Reassigned';
+                else displayTag = 'Action Taken';
+
+                el.innerHTML = `<span class="admin-action-tag">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    ${displayTag}
+                </span>
+                <div style="margin-top:6px;">${rest}</div>`;
+            }
+        });
+    });
+</script>
+{% endblock %}

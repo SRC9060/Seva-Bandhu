@@ -6,7 +6,7 @@ from .prompts import get_system_prompt
 from .context import get_customer_context
 
 def init_gemini():
-    api_key = os.environ.get("AI_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return False
     genai.configure(api_key=api_key)
@@ -58,8 +58,8 @@ def get_groq_response(system_prompt, message_text, history):
 
 def handle_chat_message(customer_username, message_text, history=None):
     """
-    Handles a customer chat message using Groq for fast responses,
-    falling back to Gemini if Groq is unavailable.
+    Handles a customer chat message using Gemini for primary responses,
+    falling back to Groq if Gemini is unavailable.
     """
     try:
         context_data = get_customer_context(customer_username)
@@ -70,13 +70,7 @@ def handle_chat_message(customer_username, message_text, history=None):
         print(f"AI context failed: {e}")
         return "I'm sorry, I couldn't retrieve your account details right now. Please try again later."
     
-    # Groq is the primary provider because it responds faster for chat.
-    if os.environ.get("GROQ_API_KEY"):
-        try:
-            return get_groq_response(system_prompt, message_text, history)
-        except Exception as e:
-            print(f"Groq API failed: {e}. Falling back to Gemini.")
-    
+    # Gemini is the primary provider
     if init_gemini():
         try:
             return get_gemini_response(system_prompt, message_text, history)
@@ -84,6 +78,13 @@ def handle_chat_message(customer_username, message_text, history=None):
             print("AI Chat Error: Gemini project access denied")
             return "The AI assistant is temporarily unavailable because this Gemini project is not authorized. Please configure an active Gemini API key."
         except Exception as e:
-            print(f"Gemini API failed: {e}")
+            print(f"Gemini API failed: {e}. Falling back to Groq.")
+
+    # Groq as fallback
+    if os.environ.get("GROQ_API_KEY"):
+        try:
+            return get_groq_response(system_prompt, message_text, history)
+        except Exception as e:
+            print(f"Groq API failed: {e}")
 
     return "I'm sorry, both our primary and backup AI systems are temporarily unavailable. Please try again later."
