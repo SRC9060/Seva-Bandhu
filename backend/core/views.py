@@ -12,6 +12,8 @@ from django.urls import reverse
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.views.decorators.csrf import csrf_exempt
@@ -351,7 +353,7 @@ def customer_dashboard(request):
     technicians_list = []
     
     for service_request in service_requests:
-        request_data = {
+        request_data: dict = {
             'request': service_request,
             'technician': None
         }
@@ -382,6 +384,33 @@ def customer_dashboard(request):
     from core.models import SupportTicket
     support_tickets = SupportTicket.objects.filter(customer=customer).order_by('-created_at')
 
+    # Fetch recommendations using the REAL ML engine
+    from core.ml.recommender import get_recommendations
+    from core.models import RecommendationLog
+    recommended_services = get_recommendations(customer.username, max_results=3)
+    
+    # Log impressions
+    for rec in recommended_services:
+        RecommendationLog.objects.create(
+            customer=customer,
+            service=rec['service'],
+            recommendation_score=rec['recommendation_score'],
+            reason=rec['reason']
+        )
+
+    # Fetch Welcome Offer
+    from core.services.offer_engine import OfferEngine
+    welcome_offer = OfferEngine.get_welcome_offer(customer)
+    if welcome_offer:
+        # Mark as shown immediately before rendering
+        welcome_offer.viewed = True
+        welcome_offer.viewed_at = timezone.now()
+        welcome_offer.save(update_fields=['viewed', 'viewed_at'])
+        
+        # Also update customer's last popup tracker for general anti-spam
+        customer.last_offer_popup_at = timezone.now()
+        customer.save(update_fields=['last_offer_popup_at'])
+
     context = {
         'customer': customer,
         'service_requests': recent_requests,
@@ -391,25 +420,169 @@ def customer_dashboard(request):
         'in_progress_requests': in_progress_requests,
         'completed_requests': completed_requests,
         'support_tickets': support_tickets,
+        'recommended_services': recommended_services,
+        'welcome_offer': welcome_offer,
     }
     
     return render(request, 'customer/dashboard_c.html', context)
+
+@login_required(login_url='customer_login')
+def customer_account(request):
+    try:
+        customer = customer_signup.objects.get(user=request.user)
+        if not customer.referral_code:
+            customer.save()
+    except customer_signup.DoesNotExist:
+        return redirect('customer_login')
+        
+    from core.models import CustomerOffer
+    offers = CustomerOffer.objects.filter(customer=customer).select_related('offer').order_by('-assigned_at')
+    
+    # Mark as viewed for analytics
+    now = timezone.now()
+    for o in offers:
+        if not o.viewed:
+            o.viewed = True
+            o.viewed_at = now
+            o.save(update_fields=['viewed', 'viewed_at'])
+    
+    # Check if there are active global offers the user might qualify for
+    from core.models import Offer
+    now = timezone.now()
+    available_global_offers = Offer.objects.filter(
+        active=True, 
+        start_date__lte=now,
+        target_segment='ALL'
+    ).exclude(expiry_date__lt=now)
+    
+    # Referral Data
+    from core.models import ReferralLog
+    from django.db.models import Sum
+    referrals = ReferralLog.objects.filter(referrer=customer).order_by('-created_at')
+    total_earned = referrals.aggregate(Sum('reward_amount'))['reward_amount__sum'] or 0.00
+    
+    context = {
+        'customer': customer,
+        'my_offers': offers,
+        'available_global_offers': available_global_offers,
+        'referrals': referrals,
+        'total_earned': total_earned,
+    }
+    return render(request, 'customer/account.html', context)
 
 
 def customer_create_request(request):
     if not request.user.is_authenticated:
         return redirect('customer_login')
     selected_service = request.GET.get('service', '')
+    from_rec = request.GET.get('rec') == '1'
+    
     try:
         customer = customer_signup.objects.filter(user=request.user).first()
-
         if not customer:
             return redirect('customer_login')
+            
+        # Log click if from recommendation
+        if from_rec and selected_service:
+            from core.models import RecommendationLog
+            log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
+            if log and not log.clicked:
+                log.clicked = True
+                log.clicked_at = timezone.now()
+                log.save(update_fields=['clicked', 'clicked_at'])
+                
     except customer_signup.DoesNotExist:
         return render(request, 'customer/create_request.html', {
             'error': 'Customer profile not found.'
         })   
     
+    smart_offer = None
+    ml_context_msg = None
+
+    # SMART OFFER INTENT TRACKING
+    if request.method == "GET" and selected_service:
+        import time
+        from django.conf import settings
+        
+        now_ts = time.time()
+        window = getattr(settings, 'SMART_OFFER_WINDOW_HOURS', 24) * 3600
+        
+        intent_log = request.session.get('smart_offer_intent', {})
+        service_views = intent_log.get(selected_service, [])
+        
+        # Clean up old timestamps outside window
+        service_views = [ts for ts in service_views if now_ts - ts <= window]
+        
+        # Add current view
+        service_views.append(now_ts)
+        
+        # Save back to session
+        intent_log[selected_service] = service_views
+        request.session['smart_offer_intent'] = intent_log
+        request.session.modified = True
+
+        # Check if threshold reached
+        threshold = getattr(settings, 'SMART_OFFER_VIEW_THRESHOLD', 3)
+        cooldown_hours = getattr(settings, 'SMART_OFFER_COOLDOWN_HOURS', 24)
+        
+        if len(service_views) >= threshold:
+            from datetime import timedelta
+            now_dt = timezone.now()
+            cooldown_clear = True
+            if customer.last_offer_popup_at:
+                hours_since_last = (now_dt - customer.last_offer_popup_at).total_seconds() / 3600
+                if hours_since_last < cooldown_hours:
+                    cooldown_clear = False
+            
+            # Check 7-day no-recent-successful-booking threshold
+            no_booking_days = getattr(settings, 'SMART_OFFER_NO_BOOKING_DAYS', 7)
+            recent_booking = ServiceRequest.objects.filter(
+                customer_username=customer.username,
+                status__in=['Assigned', 'In Progress', 'Completed'],
+                created_at__gte=now_dt - timedelta(days=no_booking_days)
+            ).exists()
+            
+            if cooldown_clear and not recent_booking:
+                from core.services.offer_engine import OfferEngine
+                eligible_offers = OfferEngine.get_eligible_smart_offers(customer)
+                
+                if eligible_offers:
+                    # Fetch ML recommendations for the user to rank offers
+                    from core.models import RecommendationLog
+                    try:
+                        from core.ml.recommender import get_recommendations
+                        recs = get_recommendations(customer.username)
+                        # recs format: [{'service': service_obj, 'recommendation_score': score, 'reason': ...}]
+                        ml_scores = {r['service'].name: r['recommendation_score'] for r in recs}
+                    except Exception:
+                        ml_scores = {}
+                        
+                    # Fallback to RecommendationLog if score not in ml_scores
+                    for offer in eligible_offers:
+                        svc_name = offer.applicable_service.name if offer.applicable_service else None
+                        if svc_name and svc_name not in ml_scores:
+                            log = RecommendationLog.objects.filter(customer=customer, service__name=svc_name).order_by('-created_at').first()
+                            if log:
+                                ml_scores[svc_name] = log.recommendation_score
+                    
+                    def score_offer(off):
+                        if off.applicable_service:
+                            return ml_scores.get(off.applicable_service.name, 0)
+                        return -1 # Base score for global offers
+                        
+                    eligible_offers.sort(key=score_offer, reverse=True)
+                    smart_offer = eligible_offers[0]
+                    
+                    # Update cooldown
+                    customer.last_offer_popup_at = now_dt
+                    customer.save(update_fields=['last_offer_popup_at'])
+                    
+                    best_score = score_offer(smart_offer)
+                    if best_score > 3.0 and smart_offer.applicable_service:
+                        ml_context_msg = f"Because you frequently interact with {smart_offer.applicable_service.name}, we've unlocked a special discount for you!"
+                    else:
+                        ml_context_msg = "We noticed you're interested in this service. Book now and save!"
+
     if request.method == "POST":
         try:
             # Get form data for ServiceDetail
@@ -477,7 +650,24 @@ def customer_create_request(request):
             )
 
             matched_service = Service.objects.filter(name__iexact=service_category).first()
-            amount = matched_service.price if matched_service else 0
+            original_amount = matched_service.price if matched_service else 0
+            final_amount = original_amount
+            applied_offer = None
+
+            # [FIRE] COUPON LOGIC INTEGRATION
+            applied_promo_code = request.POST.get('applied_promo_code')
+            if applied_promo_code and matched_service:
+                from core.services.offer_engine import OfferEngine
+                from core.models import Offer
+                is_valid, _, discount, new_total = OfferEngine.validate_and_calculate_discount(
+                    code=applied_promo_code,
+                    customer=customer,
+                    service_name=matched_service.name,
+                    original_amount=original_amount
+                )
+                if is_valid:
+                    final_amount = new_total
+                    applied_offer = Offer.objects.get(code__iexact=applied_promo_code)
             
             # Create ServiceRequest
             service_request = ServiceRequest.objects.create(
@@ -489,8 +679,34 @@ def customer_create_request(request):
                 status='Pending',
                 payment_method=payment_method,
                 payment_status='pending',
-                amount=amount
+                amount=final_amount,
+                applied_offer=applied_offer
             )
+            
+            # [FIRE] RECORD OFFER USAGE
+            if applied_offer:
+                from core.models import CustomerOffer
+                cust_offer, _ = CustomerOffer.objects.get_or_create(customer=customer, offer=applied_offer)
+                cust_offer.redeemed = True
+                cust_offer.redeemed_at = timezone.now()
+                cust_offer.save()
+            
+            # Log booking if from recommendation
+            if from_rec and selected_service:
+                from core.models import RecommendationLog
+                log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
+                if log and not log.booked:
+                    log.booked = True
+                    log.booked_at = timezone.now()
+                    log.save(update_fields=['booked', 'booked_at'])
+                    
+            # Clear Intent Tracking upon successful booking
+            intent_log = request.session.get('smart_offer_intent', {})
+            if service_category in intent_log:
+                del intent_log[service_category]
+                request.session['smart_offer_intent'] = intent_log
+                request.session.modified = True
+
             # [FIRE] CREATE NOTIFICATIONS FOR MATCHING TECHNICIANS
             matching_technicians = Technician_signup.objects.filter(
                 service_category__iexact=service_detail.service_category
@@ -506,24 +722,25 @@ def customer_create_request(request):
 
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
-            print("[FIRE] BROADCASTING NEW REQUEST")
-            async_to_sync(channel_layer.group_send)(
-                'technicians',   # keep same group if you are using it
-                {
-                    'type': 'new_request',
-                    'content': {
+            if channel_layer:
+                print("[FIRE] BROADCASTING NEW REQUEST")
+                async_to_sync(channel_layer.group_send)(
+                    'technicians',   # keep same group if you are using it
+                    {
                         'type': 'new_request',
-                        'request_id': service_request.id,
-                        'service_category': service_detail.service_category,
-                        'city': service_address.city,
-                        'priority': service_detail.priority,
-                        'problem_description': service_detail.problem_description,
-                        'preferred_date': str(service_detail.preferred_service_date),
-                        'preferred_time': service_detail.preferred_time_slot,
-                        'address': service_address.street_area,
+                        'content': {
+                            'type': 'new_request',
+                            'request_id': service_request.id,
+                            'service_category': service_detail.service_category,
+                            'city': service_address.city,
+                            'priority': service_detail.priority,
+                            'problem_description': service_detail.problem_description,
+                            'preferred_date': str(service_detail.preferred_service_date),
+                            'preferred_time': service_detail.preferred_time_slot,
+                            'address': service_address.street_area,
+                        }
                     }
-                }
-            )
+                )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -538,7 +755,9 @@ def customer_create_request(request):
             })
     return render(request, 'customer/create_request.html', {
         'customer': customer,
-        'selected_service': selected_service
+        'selected_service': selected_service,
+        'smart_offer': smart_offer,
+        'ml_context_msg': ml_context_msg
     })
 
 
@@ -705,9 +924,12 @@ def customer_sign_up(request):
     email = request.POST.get('email', '').strip().lower()
     contact = request.POST.get('contact', '').strip()
     password = request.POST.get('password', '')
-    form_data = {'username': username, 'email': email, 'contact': contact}
+    referral_code_input = request.POST.get('referral_code', '').strip()
+    
+    form_data = {'username': username, 'email': email, 'contact': contact, 'referral_code': referral_code_input}
     verified_email = request.session.get('verified_email', '')
     context = {'form_data': form_data, 'verified_email': verified_email}
+    
     if not all([username, email, contact, password]):
         context['error'] = 'Please complete every field.'
         return render(request, 'customer/signup.html', context)
@@ -720,12 +942,47 @@ def customer_sign_up(request):
     if User.objects.filter(email__iexact=email).exists():
         context['error'] = 'An account already exists for this email. Please log in.'
         return render(request, 'customer/signup.html', context)
+        
     try:
         validate_password(password, user=User(username=username, email=email))
         with transaction.atomic():
             user = User.objects.create_user(username=username, email=email, password=password)
-            customer = customer_signup.objects.create(user=user, username=username, email=email, contact=contact,
-                                                       password='', email_verified=True, phone_verified=False)
+            
+            # [FIRE] Generate Unique Referral Code
+            import uuid
+            new_ref_code = f"SEVA-{uuid.uuid4().hex[:6].upper()}"
+            
+            customer = customer_signup.objects.create(
+                user=user, 
+                username=username, 
+                email=email, 
+                contact=contact,
+                password='', 
+                email_verified=True, 
+                phone_verified=False,
+                referral_code=new_ref_code
+            )
+            
+            # [FIRE] Process Referral Payouts
+            if referral_code_input:
+                referrer = customer_signup.objects.filter(referral_code__iexact=referral_code_input).first()
+                if referrer:
+                    customer.referred_by = referrer
+                    
+                    # Add Wallet Funds (₹50 to referrer, ₹25 to referee)
+                    referrer.wallet_balance += 50
+                    referrer.save(update_fields=['wallet_balance'])
+                    
+                    customer.wallet_balance += 25
+                    customer.save(update_fields=['wallet_balance', 'referred_by'])
+                    
+                    from core.models import ReferralLog
+                    ReferralLog.objects.create(
+                        referrer=referrer,
+                        referee=customer,
+                        reward_amount=50.00
+                    )
+            
         request.session.pop('verified_email', None)
         request.session.pop('verification_code_hash', None)
         request.session.pop('verification_code_email', None)
@@ -871,16 +1128,15 @@ def accept_request(request, id):
 
         # [FIRE] REALTIME REMOVE NOTIFICATION
         channel_layer = get_channel_layer()
-
-        print("[FIRE] SENDING notification_removed EVENT")
-
-        async_to_sync(channel_layer.group_send)(
-            'technicians',
-            {
-                'type': 'notification_removed',
-                'request_id': service_request.id,
-            }
-        )
+        if channel_layer:
+            print("[FIRE] SENDING notification_removed EVENT")
+            async_to_sync(channel_layer.group_send)(
+                'technicians',
+                {
+                    'type': 'notification_removed',
+                    'request_id': service_request.id,
+                }
+            )
 
     return JsonResponse({'status': 'success'})
 
@@ -947,8 +1203,9 @@ def generate_invoice_pdf(service):
     result = BytesIO()
     pdf_status = pisa.CreatePDF(src=html, dest=result)
 
-    if pdf_status.err:
-        print('[ICON] PDF generation failed for service:', service.id, 'errors:', pdf_status.err)
+    err = getattr(pdf_status, 'err', 0)
+    if err:
+        print('[ICON] PDF generation failed for service:', service.id, 'errors:', err)
         return None
 
     return result.getvalue()
@@ -1101,7 +1358,8 @@ def customer_google_auth(request):
                 random.randint(1000,9999)
             )
 
-            password = User.objects.make_random_password()
+            import secrets
+            password = secrets.token_urlsafe(10)
 
             user = User.objects.create_user(
 
@@ -1161,6 +1419,7 @@ def verify_email(request, token):
         'success': True, 'message': 'Your email is verified. You can now log in.'
     })
 
+
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1217,9 +1476,6 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
-
-
-
 
 @csrf_exempt
 def customer_phone_verify_complete(request):
@@ -1333,3 +1589,52 @@ def customer_api_create_ticket(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def apply_coupon(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+        
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'You must be logged in to apply a coupon.'}, status=401)
+        
+    try:
+        data = json.loads(request.body)
+        code = data.get('code', '').strip()
+        service_name = data.get('service_name', '').strip()
+        
+        if not code or not service_name:
+            return JsonResponse({'status': 'error', 'message': 'Promo code and service are required.'}, status=400)
+            
+        customer = customer_signup.objects.filter(user=request.user).first()
+        if not customer:
+            return JsonResponse({'status': 'error', 'message': 'Customer profile not found.'}, status=404)
+            
+        service = Service.objects.filter(name__iexact=service_name).first()
+        if not service:
+            return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            
+        from core.services.offer_engine import OfferEngine
+        is_valid, message, discount, new_total = OfferEngine.validate_and_calculate_discount(
+            code=code, 
+            customer=customer, 
+            service_name=service.name, 
+            original_amount=service.price
+        )
+        
+        if is_valid:
+            return JsonResponse({
+                'status': 'success',
+                'message': message,
+                'original_price': float(service.price),
+                'discount_amount': float(discount),
+                'new_total': float(new_total)
+            })
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': message
+            })
+            
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

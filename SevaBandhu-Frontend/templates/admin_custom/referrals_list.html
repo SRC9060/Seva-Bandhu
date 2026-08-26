@@ -1,0 +1,41 @@
+{% extends 'admin_custom/base_admin.html' %}
+
+{% block content %}
+<h1>Referral Logs</h1>
+<p style="color: #64748b; margin-bottom: 24px;">View all successful referrals and rewards distributed.</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Referrer (Sender)</th>
+                <th>Referee (New User)</th>
+                <th>Reward Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in referrals %}
+            <tr>
+                <td style="color:#64748b;">{{ log.created_at|date:"M d, Y H:i" }}</td>
+                <td>
+                    <a href="{% url 'admin_customer_detail' log.referrer.id %}" style="color: #0f172a; font-weight: 600; text-decoration: none;">
+                        {{ log.referrer.username }}
+                    </a>
+                </td>
+                <td>
+                    <a href="{% url 'admin_customer_detail' log.referee.id %}" style="color: #2563eb; font-weight: 600; text-decoration: none;">
+                        {{ log.referee.username }}
+                    </a>
+                </td>
+                <td><strong style="color: #15803d;">₹{{ log.reward_amount }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align:center; color:#94a3b8; padding:32px;">No referrals found yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

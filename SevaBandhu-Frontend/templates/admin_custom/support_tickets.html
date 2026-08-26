@@ -11,13 +11,13 @@
             style="flex-grow: 1; max-width: 400px;">
         <select name="type">
             <option value="">All Types</option>
-            <option value="Refund" {% if type_filter=='Refund' %}selected{% endif %}>Refund</option>
-            <option value="Complaint" {% if type_filter=='Complaint' %}selected{% endif %}>Complaint</option>
+            <option value="Refund" {% if type_filter == 'Refund' %}selected{% endif %}>Refund</option>
+            <option value="Complaint" {% if type_filter == 'Complaint' %}selected{% endif %}>Complaint</option>
         </select>
         <select name="status">
             <option value="">All Statuses</option>
-            <option value="Open" {% if status_filter=='Open' %}selected{% endif %}>Open</option>
-            <option value="Resolved" {% if status_filter=='Resolved' %}selected{% endif %}>Resolved</option>
+            <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+            <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
         </select>
         <button type="submit" class="btn btn-primary">Filter</button>
         {% if query or type_filter or status_filter %}

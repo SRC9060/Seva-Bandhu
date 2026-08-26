@@ -52,3 +52,7 @@ FIREBASE_CONFIG = {
     "messaging_sender_id": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", ""),
     "app_id": os.environ.get("FIREBASE_APP_ID", ""),
 }
+
+SMART_OFFER_VIEW_THRESHOLD = 3
+SMART_OFFER_WINDOW_HOURS = 24
+SMART_OFFER_COOLDOWN_HOURS = 24
