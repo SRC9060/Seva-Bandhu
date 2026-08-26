@@ -24,7 +24,7 @@ def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('admin_login')
-        if not request.user.is_superuser:
+        if not getattr(request.user, 'is_superuser', False):
             # Optionally clear session if they are a regular user trying to access admin
             return redirect('admin_login')
         return view_func(request, *args, **kwargs)
@@ -32,7 +32,7 @@ def superuser_required(view_func):
 
 # --- AUTHENTICATION ---
 def admin_login_view(request):
-    if request.user.is_authenticated and getattr(request.user, 'is_superuser', False):
+    if request.user.is_authenticated and request.user.is_superuser:
         return redirect('admin_dashboard')
         
     if request.method == "POST":
@@ -145,7 +145,17 @@ def admin_technicians_list(request):
 def admin_technician_detail(request, id):
     technician = get_object_or_404(Technician_signup, id=id)
     requests = ServiceRequest.objects.filter(technician_username=technician.username).order_by('-created_at')
-    return render(request, 'admin_custom/technician_detail.html', {'technician': technician, 'requests': requests})
+    
+    from core.models import TechnicianWarning, TechnicianRating
+    warnings = TechnicianWarning.objects.filter(technician=technician).order_by('-created_at')
+    ratings = TechnicianRating.objects.filter(technician=technician).order_by('-created_at')
+    
+    return render(request, 'admin_custom/technician_detail.html', {
+        'technician': technician, 
+        'requests': requests,
+        'warnings': warnings,
+        'ratings': ratings
+    })
 
 @superuser_required
 def admin_technician_deactivate(request, id):
@@ -233,8 +243,16 @@ def admin_service_toggle(request, id):
 def admin_service_delete(request, id):
     if request.method == "POST":
         service = get_object_or_404(Service, id=id)
-        service.delete()
-        messages.success(request, f'Service {service.name} deleted successfully.')
+        # Check if the service name is used in ServiceDetail records
+        is_used = ServiceDetail.objects.filter(service_category=service.name).exists()
+        if is_used:
+            # Instead of deleting, just disable it
+            service.is_enabled = False
+            service.save()
+            messages.warning(request, f'Service {service.name} is referenced by historical requests. It has been disabled instead of deleted.')
+        else:
+            service.delete()
+            messages.success(request, f'Service {service.name} deleted successfully.')
     return redirect('admin_services_list')
 
 
@@ -380,6 +398,21 @@ def admin_support_ticket_action(request, id):
         # Combine the predefined action with admin notes for internal database
         if resolution_type:
             ticket.action_taken = f"[{resolution_type}] {action_notes}"
+            
+            # Implementation of Step 9: Warning System
+            if resolution_type == 'Action Taken Against Technician' and ticket.related_technician:
+                from core.models import TechnicianWarning
+                TechnicianWarning.objects.update_or_create(
+                    support_ticket=ticket,
+                    defaults={
+                        'technician': ticket.related_technician,
+                        'penalty_points': 1,
+                        'status': 'ACTIVE',
+                        'admin_notes': f"Warning from Support Ticket #{ticket.id}: {action_notes}",
+                    }
+                )
+                messages.success(request, f'Official warning issued to {ticket.related_technician.username} with a 1-point penalty.')
+                
         else:
             ticket.action_taken = action_notes
             
@@ -448,6 +481,10 @@ def admin_platform_analytics(request):
     import time
     from django.db.models import Avg, Count, Sum
     from core.models import customer_signup, ServiceRequest, RecommendationLog, Offer, CustomerOffer
+    from core.services.offer_engine import OfferEngine
+
+    for customer in customer_signup.objects.all():
+        OfferEngine.sync_customer_assignments(customer)
 
     customers_analyzed = customer_signup.objects.count()
     interactions = ServiceRequest.objects.count()
@@ -587,7 +624,15 @@ def admin_offer_delete(request, id):
 # --- CUSTOMER OFFERS ---
 @superuser_required
 def admin_customer_offers_list(request):
-    customer_offers = CustomerOffer.objects.select_related('customer', 'customer__user', 'offer').order_by('-assigned_at')
+    from core.models import customer_signup
+    from core.services.offer_engine import OfferEngine
+
+    for customer in customer_signup.objects.all():
+        OfferEngine.sync_customer_assignments(customer)
+
+    customer_offers = CustomerOffer.objects.filter(
+        viewed=True
+    ).select_related('customer', 'customer__user', 'offer').order_by('-assigned_at')
     return render(request, 'admin_custom/customer_offers_list.html', {'customer_offers': customer_offers})
 
 # --- REFERRAL LOGS ---

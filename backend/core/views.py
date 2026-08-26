@@ -400,6 +400,7 @@ def customer_dashboard(request):
 
     # Fetch Welcome Offer
     from core.services.offer_engine import OfferEngine
+    from django.utils import timezone
     welcome_offer = OfferEngine.get_welcome_offer(customer)
     if welcome_offer:
         # Mark as shown immediately before rendering
@@ -430,15 +431,16 @@ def customer_dashboard(request):
 def customer_account(request):
     try:
         customer = customer_signup.objects.get(user=request.user)
-        if not customer.referral_code:
-            customer.save()
     except customer_signup.DoesNotExist:
         return redirect('customer_login')
         
     from core.models import CustomerOffer
+    from core.services.offer_engine import OfferEngine
+    OfferEngine.sync_customer_assignments(customer)
     offers = CustomerOffer.objects.filter(customer=customer).select_related('offer').order_by('-assigned_at')
     
     # Mark as viewed for analytics
+    from django.utils import timezone
     now = timezone.now()
     for o in offers:
         if not o.viewed:
@@ -448,12 +450,15 @@ def customer_account(request):
     
     # Check if there are active global offers the user might qualify for
     from core.models import Offer
+    from django.utils import timezone
     now = timezone.now()
     available_global_offers = Offer.objects.filter(
         active=True, 
         start_date__lte=now,
         target_segment='ALL'
-    ).exclude(expiry_date__lt=now)
+    ).exclude(expiry_date__lt=now).exclude(
+        id__in=offers.values_list('offer_id', flat=True)
+    )
     
     # Referral Data
     from core.models import ReferralLog
@@ -487,6 +492,7 @@ def customer_create_request(request):
             from core.models import RecommendationLog
             log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
             if log and not log.clicked:
+                from django.utils import timezone
                 log.clicked = True
                 log.clicked_at = timezone.now()
                 log.save(update_fields=['clicked', 'clicked_at'])
@@ -526,6 +532,7 @@ def customer_create_request(request):
         cooldown_hours = getattr(settings, 'SMART_OFFER_COOLDOWN_HOURS', 24)
         
         if len(service_views) >= threshold:
+            from django.utils import timezone
             from datetime import timedelta
             now_dt = timezone.now()
             cooldown_clear = True
@@ -686,6 +693,7 @@ def customer_create_request(request):
             # [FIRE] RECORD OFFER USAGE
             if applied_offer:
                 from core.models import CustomerOffer
+                from django.utils import timezone
                 cust_offer, _ = CustomerOffer.objects.get_or_create(customer=customer, offer=applied_offer)
                 cust_offer.redeemed = True
                 cust_offer.redeemed_at = timezone.now()
@@ -697,6 +705,7 @@ def customer_create_request(request):
                 log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
                 if log and not log.booked:
                     log.booked = True
+                    from django.utils import timezone
                     log.booked_at = timezone.now()
                     log.save(update_fields=['booked', 'booked_at'])
                     
@@ -722,25 +731,24 @@ def customer_create_request(request):
 
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
-            if channel_layer:
-                print("[FIRE] BROADCASTING NEW REQUEST")
-                async_to_sync(channel_layer.group_send)(
-                    'technicians',   # keep same group if you are using it
-                    {
+            print("[FIRE] BROADCASTING NEW REQUEST")
+            async_to_sync(channel_layer.group_send)( # type: ignore
+                'technicians',   # keep same group if you are using it
+                {
+                    'type': 'new_request',
+                    'content': {
                         'type': 'new_request',
-                        'content': {
-                            'type': 'new_request',
-                            'request_id': service_request.id,
-                            'service_category': service_detail.service_category,
-                            'city': service_address.city,
-                            'priority': service_detail.priority,
-                            'problem_description': service_detail.problem_description,
-                            'preferred_date': str(service_detail.preferred_service_date),
-                            'preferred_time': service_detail.preferred_time_slot,
-                            'address': service_address.street_area,
-                        }
+                        'request_id': service_request.id,
+                        'service_category': service_detail.service_category,
+                        'city': service_address.city,
+                        'priority': service_detail.priority,
+                        'problem_description': service_detail.problem_description,
+                        'preferred_date': str(service_detail.preferred_service_date),
+                        'preferred_time': service_detail.preferred_time_slot,
+                        'address': service_address.street_area,
                     }
-                )
+                }
+            )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -789,10 +797,12 @@ def customer_my_requests(request):
                 technician = Technician_signup.objects.get(username=req.technician_username)
             except Technician_signup.DoesNotExist:
                 technician = None
+        rating = getattr(req, 'technician_rating', None)
         # Create a dict with request and technician data
         requests_with_technician.append({
             'request': req,
             'technician': technician,
+            'rating': rating,
         })
     
     context = {
@@ -962,6 +972,19 @@ def customer_sign_up(request):
                 phone_verified=False,
                 referral_code=new_ref_code
             )
+
+            from core.models import Offer, CustomerOffer
+            welcome_offer = Offer.objects.filter(
+                target_segment='NEW_CUSTOMER',
+                active=True,
+                start_date__lte=timezone.now()
+            ).exclude(expiry_date__lt=timezone.now()).order_by('-created_at').first()
+            if welcome_offer:
+                CustomerOffer.objects.create(
+                    customer=customer,
+                    offer=welcome_offer,
+                    is_welcome_offer=True
+                )
             
             # [FIRE] Process Referral Payouts
             if referral_code_input:
@@ -1128,15 +1151,16 @@ def accept_request(request, id):
 
         # [FIRE] REALTIME REMOVE NOTIFICATION
         channel_layer = get_channel_layer()
-        if channel_layer:
-            print("[FIRE] SENDING notification_removed EVENT")
-            async_to_sync(channel_layer.group_send)(
-                'technicians',
-                {
-                    'type': 'notification_removed',
-                    'request_id': service_request.id,
-                }
-            )
+
+        print("[FIRE] SENDING notification_removed EVENT")
+
+        async_to_sync(channel_layer.group_send)( # type: ignore
+            'technicians',
+            {
+                'type': 'notification_removed',
+                'request_id': service_request.id,
+            }
+        )
 
     return JsonResponse({'status': 'success'})
 
@@ -1203,9 +1227,8 @@ def generate_invoice_pdf(service):
     result = BytesIO()
     pdf_status = pisa.CreatePDF(src=html, dest=result)
 
-    err = getattr(pdf_status, 'err', 0)
-    if err:
-        print('[ICON] PDF generation failed for service:', service.id, 'errors:', err)
+    if getattr(pdf_status, 'err', False):
+        print('[ICON] PDF generation failed for service:', service.id, 'errors:', pdf_status.err)
         return None
 
     return result.getvalue()
@@ -1358,7 +1381,6 @@ def customer_google_auth(request):
                 random.randint(1000,9999)
             )
 
-            import secrets
             password = secrets.token_urlsafe(10)
 
             user = User.objects.create_user(
@@ -1419,7 +1441,6 @@ def verify_email(request, token):
         'success': True, 'message': 'Your email is verified. You can now log in.'
     })
 
-
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1476,6 +1497,9 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
+
+
+
 
 @csrf_exempt
 def customer_phone_verify_complete(request):
@@ -1555,6 +1579,43 @@ def customer_api_chat(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
+def create_customer_complaint_service(customer, request_id, ticket_type, description, category=None):
+    from core.models import SupportTicket
+    
+    # 1. Fetch ServiceRequest safely checking ownership
+    try:
+        service_req = ServiceRequest.objects.get(id=request_id, customer_username=customer.username)
+    except ServiceRequest.DoesNotExist:
+        return False, 'Request ID not found or you are not authorized to report an issue for this request.'
+        
+    # 2. Enforce Technician assignment
+    if not service_req.technician_username:
+        return False, 'This request does not have an assigned technician yet.'
+        
+    try:
+        technician = Technician_signup.objects.get(username=service_req.technician_username)
+    except Technician_signup.DoesNotExist:
+        return False, 'Assigned technician profile could not be found.'
+        
+    # 3. Compile full description
+    if category:
+        full_description = f"Category: {category}\n\n{description}"
+    else:
+        full_description = description
+        
+    # 4. Create SupportTicket with STRICT bindings
+    SupportTicket.objects.create(
+        customer=customer,
+        ticket_type=ticket_type,
+        service_request_id=str(service_req.id), # Fallback for old views
+        technician_name=technician.username,    # Fallback for old views
+        related_booking=service_req,            # Strict mapping
+        related_technician=technician,          # Strict mapping
+        description=full_description,
+        status='Open'
+    )
+    return True, 'Ticket created successfully.'
+
 @csrf_exempt
 def customer_api_create_ticket(request):
     if not request.user.is_authenticated:
@@ -1570,25 +1631,68 @@ def customer_api_create_ticket(request):
             data = json.loads(request.body)
             ticket_type = data.get('ticket_type')
             description = data.get('description')
-            technician_name = data.get('technician_name', '')
             service_request_id = data.get('service_request_id', '')
 
-            if not ticket_type or not description:
-                return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
+            if not ticket_type or not description or not service_request_id:
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields (including Request ID).'}, status=400)
             
-            from core.models import SupportTicket
-            SupportTicket.objects.create(
-                customer=customer,
-                ticket_type=ticket_type,
-                description=description,
-                technician_name=technician_name,
-                service_request_id=service_request_id
+            # Delegate to canonical service
+            success, message = create_customer_complaint_service(
+                customer=customer, 
+                request_id=service_request_id, 
+                ticket_type=ticket_type, 
+                description=description
             )
-            return JsonResponse({'status': 'success', 'message': 'Ticket created successfully'})
+            
+            if success:
+                return JsonResponse({'status': 'success', 'message': message})
+            else:
+                return JsonResponse({'status': 'error', 'message': message})
+                
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def customer_api_verify_request(request):
+    """
+    Called by the chatbot UI when user enters a Request ID.
+    Validates ownership and returns the assigned technician name automatically.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+        
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            request_id = data.get('request_id', '').strip()
+            
+            if not request_id:
+                return JsonResponse({'status': 'error', 'message': 'Please provide a Request ID.'})
+                
+            customer = customer_signup.objects.get(user=request.user)
+            
+            try:
+                # IMPORTANT: Verify request.user/customer == ServiceRequest.customer
+                service_req = ServiceRequest.objects.get(id=request_id, customer_username=customer.username)
+            except ServiceRequest.DoesNotExist:
+                # Hiding whether it belongs to another customer or doesn't exist
+                return JsonResponse({'status': 'error', 'message': 'Request ID not found or you are not authorized to view it.'})
+                
+            if not service_req.technician_username:
+                return JsonResponse({'status': 'error', 'message': 'This request does not have an assigned technician yet.'})
+                
+            return JsonResponse({
+                'status': 'success', 
+                'technician_name': service_req.technician_username,
+                'service_name': service_req.service_detail.service_category if hasattr(service_req, 'service_detail') else 'Service'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid method.'})
 
 @csrf_exempt
 def apply_coupon(request):
@@ -1638,3 +1742,67 @@ def apply_coupon(request):
             
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url='customer_login')
+def submit_technician_rating(request):
+    if request.method == "POST":
+        request_id = request.POST.get('request_id')
+        rating_val = request.POST.get('rating')
+        review_text = request.POST.get('review_text', '')
+
+        try:
+            rating_val = int(rating_val)
+            if rating_val < 1 or rating_val > 5:
+                raise ValueError("Rating must be between 1 and 5.")
+                
+            customer = customer_signup.objects.get(user=request.user)
+            service_req = ServiceRequest.objects.get(id=request_id, customer_username=customer.username, status='Completed')
+            technician = Technician_signup.objects.get(username=service_req.technician_username)
+            
+            from core.models import TechnicianRating
+            # Check if rating already exists
+            if hasattr(service_req, 'technician_rating'):
+                return JsonResponse({'status': 'error', 'message': 'You have already rated this service.'})
+                
+            TechnicianRating.objects.create(
+                customer=customer,
+                technician=technician,
+                service_request=service_req,
+                rating=rating_val,
+                review_text=review_text
+            )
+            return JsonResponse({'status': 'success', 'message': 'Thank you for your rating!'})
+            
+        except (ValueError, ServiceRequest.DoesNotExist, Technician_signup.DoesNotExist) as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+@login_required(login_url='customer_login')
+def submit_complaint(request):
+    if request.method == "POST":
+        request_id = request.POST.get('request_id')
+        category = request.POST.get('category')
+        description = request.POST.get('description', '')
+
+        try:
+            customer = customer_signup.objects.get(user=request.user)
+            
+            # Delegate to canonical service
+            success, message = create_customer_complaint_service(
+                customer=customer,
+                request_id=request_id,
+                ticket_type='Complaint',
+                description=description,
+                category=category
+            )
+            
+            if success:
+                return JsonResponse({'status': 'success', 'message': 'Your complaint has been submitted. Our team will review it shortly.'})
+            else:
+                return JsonResponse({'status': 'error', 'message': message})
+                
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
