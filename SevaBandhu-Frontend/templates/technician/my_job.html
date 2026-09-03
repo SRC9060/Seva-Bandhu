@@ -217,6 +217,10 @@
         color: #ffffff;
     }
 
+    .chat-button-hidden {
+        display: none !important;
+    }
+
     .btn-action-success:hover {
         background: #15803d;
     }
@@ -291,7 +295,8 @@
 
                     <div class="job-info-item">
                         <span class="job-info-label">Preferred Slot</span>
-                        <span class="job-info-val">{{ job.service_detail.preferred_service_date }} • {{ job.service_detail.preferred_time_slot }}</span>
+                        <span class="job-info-val">{{ job.service_detail.preferred_service_date }} • {{
+                            job.service_detail.preferred_time_slot }}</span>
                     </div>
 
                     <div class="job-info-item">
@@ -313,7 +318,7 @@
 
             {% if job.status|lower != 'completed' %}
             <div class="job-actions-cluster">
-                <a href="{% url 'technician_update_status' %}" class="btn-action btn-action-outline">
+                <a href="{% url 'technician_update_status' job.id %}" class="btn-action btn-action-outline">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2.2">
                         <path d="M12 20h9" />
@@ -340,12 +345,8 @@
                 </a>
 
                 <a href="{% url 'service_request_chat' job.id %}" id="chat-btn-{{ job.id }}"
-                    class="btn-action btn-action-primary"
-                    {% if not job.tracking_active and job.status != 'In Progress' %}
-                    style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); display: none;"
-                    {% else %}
-                    style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);"
-                    {% endif %}>
+                    class="btn-action btn-action-primary chat-btn {% if not job.tracking_active and job.status != 'In Progress' %}chat-button-hidden{% endif %}"
+                    style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
                     💬 Chat with Customer
                 </a>
             </div>

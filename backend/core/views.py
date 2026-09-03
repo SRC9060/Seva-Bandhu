@@ -106,6 +106,25 @@ def technician_dashboard(request):
     technician=technician,
     is_read=False
 )
+    from core.services.technician_wallet import TechnicianWalletService
+    from core.services.incentive_engine import IncentiveEngine
+    
+    wallet = TechnicianWalletService.get_or_create_wallet(technician)
+    active_missions = IncentiveEngine.get_active_incentives_progress(technician)
+    
+    # Calculate today's earnings (just for the summary)
+    from django.utils import timezone
+    from core.models import TechnicianWalletTransaction
+    now = timezone.localtime(timezone.now())
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    from django.db.models import Sum
+    todays_earnings = TechnicianWalletTransaction.objects.filter(
+        wallet=wallet,
+        transaction_type__in=['JOB_EARNING', 'INCENTIVE'],
+        created_at__gte=start_of_day
+    ).aggregate(Sum('amount'))['amount__sum'] or 0.00
+    
     context = {
         'technician': technician,
         'assigned_jobs': assigned_jobs,
@@ -113,7 +132,10 @@ def technician_dashboard(request):
         'pending_jobs': assigned_jobs_count,
         'in_progress_jobs': in_progress_jobs,
         'completed_jobs': completed_jobs,
-        'notifications': notifications
+        'notifications': notifications,
+        'wallet': wallet,
+        'active_missions': active_missions,
+        'todays_earnings': todays_earnings
     }
     
     return render(request, 'technician/dashboard_t.html', context)
@@ -146,7 +168,7 @@ def technician_update_location(request):
     return render(request, 'technician/update_location.html')
 
 
-def technician_update_status(request):
+def technician_update_status(request, id):
     if not request.user.is_authenticated:
         return redirect('technician_login')
     
@@ -156,67 +178,71 @@ def technician_update_status(request):
         return render(request, 'technician/update_status.html', {
             'error': 'Technician profile not found.'
         })
+        
+    try:
+        job = ServiceRequest.objects.select_related('service_detail', 'service_address').get(
+            id=id,
+            technician_username=technician.username
+        )
+    except ServiceRequest.DoesNotExist:
+        return render(request, 'technician/update_status.html', {
+            'technician': technician,
+            'error': 'Job not found.'
+        })
     
     if request.method == 'POST':
-        job_id = request.POST.get('job_id')
         new_status = request.POST.get('status')
         
-        try:
-            job = ServiceRequest.objects.get(
-                id=job_id,
-                technician_username=technician.username
-            )
+        # [FIRE] UPDATE JOB STATUS
+        job.status = new_status
+        job.save()
 
-            # [FIRE] UPDATE JOB STATUS
-            job.status = new_status
-            job.save()
+        # [FIRE] MAIN FIX — HANDLE AVAILABILITY
+        if new_status == "Completed":
+            # Close chat
+            from core.models import ChatConversation
+            from django.utils import timezone
+            try:
+                chat = ChatConversation.objects.get(service_request=job)
+                chat.is_active = False
+                chat.closed_at = timezone.now()
+                chat.save()
+            except ChatConversation.DoesNotExist:
+                pass
 
-            # [FIRE] MAIN FIX — HANDLE AVAILABILITY
-            if new_status == "Completed":
-                # Close chat
-                from core.models import ChatConversation
-                from django.utils import timezone
+            if job.payment_method == 'offline' and job.payment_status == 'pending':
+                job.payment_status = 'paid'
+                job.save()
                 try:
-                    chat = ChatConversation.objects.get(service_request=job)
-                    chat.is_active = False
-                    chat.closed_at = timezone.now()
-                    chat.save()
-                except ChatConversation.DoesNotExist:
-                    pass
+                    send_invoice_email(job)
+                except Exception as e:
+                    print("[ICON] Invoice email failed:", str(e))
 
-                if job.payment_method == 'offline' and job.payment_status == 'pending':
-                    job.payment_status = 'paid'
-                    job.save()
-                    try:
-                        send_invoice_email(job)
-                    except Exception as e:
-                        print("[ICON] Invoice email failed:", str(e))
+            technician.is_available = True
+            technician.save()
+            print("[ICON] Technician is now AVAILABLE")
 
-                technician.is_available = True
-                technician.save()
-                print("[ICON] Technician is now AVAILABLE")
+            # [NEW] Job Earnings and Incentives
+            from core.services.technician_wallet import TechnicianWalletService
+            from core.services.incentive_engine import IncentiveEngine
+            
+            try:
+                TechnicianWalletService.get_or_create_wallet(technician)
+                TechnicianWalletService.credit_job_earnings(technician, job)
+                IncentiveEngine.evaluate_daily_jobs(technician)
+            except Exception as e:
+                print("[WALLET ERROR]", str(e))
 
-            elif new_status == "In Progress":
-                technician.is_available = False
-                technician.save()
-                print("🔒 Technician marked BUSY")
+        elif new_status == "In Progress":
+            technician.is_available = False
+            technician.save()
+            print("🔒 Technician marked BUSY")
 
-            return redirect('technician_my_jobs')
-
-        except ServiceRequest.DoesNotExist:
-            return render(request, 'technician/update_status.html', {
-                'technician': technician,
-                'error': 'Job not found.'
-            })
-    
-    # Fetch all jobs assigned to this technician
-    assigned_jobs = ServiceRequest.objects.filter(
-        technician_username=technician.username
-    ).select_related('service_detail', 'service_address').order_by('-created_at')
+        return redirect('technician_my_jobs')
     
     context = {
         'technician': technician,
-        'my_jobs': assigned_jobs,
+        'job': job,
     }
     
     return render(request, 'technician/update_status.html', context)
@@ -246,7 +272,7 @@ def technician_sign_up(request):
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                password=password
+                password=''  # Password hashes live only on Django's User model.
             )
 
             # Create technician profile with all fields
@@ -255,7 +281,7 @@ def technician_sign_up(request):
                 username=username,
                 email=email,
                 contact=contact,
-                password=''
+                password=password
             )
 
             return redirect('technician_login')
@@ -364,7 +390,7 @@ def customer_dashboard(request):
     technicians_list = []
     
     for service_request in service_requests:
-        request_data: dict = {
+        request_data = {
             'request': service_request,
             'technician': None
         }
@@ -373,7 +399,7 @@ def customer_dashboard(request):
         if service_request.technician_username:
             try:
                 technician = Technician_signup.objects.get(username=service_request.technician_username)
-                request_data['technician'] = technician
+                request_data['technician'] = technician # type: ignore
                 
                 # Collect unique technicians
                 if technician not in technicians_list:
@@ -712,10 +738,10 @@ def customer_create_request(request):
             
             # Log booking if from recommendation
             if from_rec and selected_service:
+                from django.utils import timezone
                 from core.models import RecommendationLog
                 log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
                 if log and not log.booked:
-                    from django.utils import timezone
                     log.booked = True
                     log.booked_at = timezone.now()
                     log.save(update_fields=['booked', 'booked_at'])
@@ -742,25 +768,25 @@ def customer_create_request(request):
 
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
+            print("[FIRE] BROADCASTING NEW REQUEST")
             if channel_layer:
-                print("[FIRE] BROADCASTING NEW REQUEST")
                 async_to_sync(channel_layer.group_send)(
-                    'technicians',   # keep same group if you are using it
-                    {
+                'technicians',   # keep same group if you are using it
+                {
+                    'type': 'new_request',
+                    'content': {
                         'type': 'new_request',
-                        'content': {
-                            'type': 'new_request',
-                            'request_id': service_request.id,
-                            'service_category': service_detail.service_category,
-                            'city': service_address.city,
-                            'priority': service_detail.priority,
-                            'problem_description': service_detail.problem_description,
-                            'preferred_date': str(service_detail.preferred_service_date),
-                            'preferred_time': service_detail.preferred_time_slot,
-                            'address': service_address.street_area,
-                        }
+                        'request_id': service_request.id,
+                        'service_category': service_detail.service_category,
+                        'city': service_address.city,
+                        'priority': service_detail.priority,
+                        'problem_description': service_detail.problem_description,
+                        'preferred_date': str(service_detail.preferred_service_date),
+                        'preferred_time': service_detail.preferred_time_slot,
+                        'address': service_address.street_area,
                     }
-                )
+                }
+            )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -1175,15 +1201,17 @@ def accept_request(request, id):
 
         # [FIRE] REALTIME REMOVE NOTIFICATION
         channel_layer = get_channel_layer()
+
+        print("[FIRE] SENDING notification_removed EVENT")
+
         if channel_layer:
-            print("[FIRE] SENDING notification_removed EVENT")
             async_to_sync(channel_layer.group_send)(
-                'technicians',
-                {
-                    'type': 'notification_removed',
-                    'request_id': service_request.id,
-                }
-            )
+            'technicians',
+            {
+                'type': 'notification_removed',
+                'request_id': service_request.id,
+            }
+        )
 
     return JsonResponse({'status': 'success'})
 
@@ -1421,6 +1449,7 @@ def customer_google_auth(request):
                 random.randint(1000,9999)
             )
 
+            import secrets
             password = secrets.token_urlsafe(12)
 
             user = User.objects.create_user(
@@ -1483,7 +1512,6 @@ def verify_email(request, token):
 
 
 
-@csrf_exempt
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1509,7 +1537,6 @@ def verify_email_code(request):
     return JsonResponse({'status': 'success', 'message': 'Email verified.'})
 
 
-@csrf_exempt
 def send_verification_email(request):
     if request.method != "POST":
         return JsonResponse({
@@ -1541,6 +1568,8 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
+
+
 
 
 @csrf_exempt
@@ -1813,6 +1842,15 @@ def submit_technician_rating(request):
                 rating=rating_val,
                 review_text=review_text
             )
+            
+            # [NEW] Evaluate Five-Star Rating Incentive
+            if rating_val == 5:
+                from core.services.incentive_engine import IncentiveEngine
+                try:
+                    IncentiveEngine.evaluate_five_star_ratings(technician)
+                except Exception as e:
+                    print("[INCENTIVE ERROR]", str(e))
+                    
             return JsonResponse({'status': 'success', 'message': 'Thank you for your rating!'})
             
         except (ValueError, ServiceRequest.DoesNotExist, Technician_signup.DoesNotExist) as e:
@@ -1894,3 +1932,48 @@ def submit_complaint(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+
+# ==========================================
+# TECHNICIAN WALLET VIEWS
+# ==========================================
+@login_required(login_url='technician_login')
+def technician_wallet_view(request):
+    try:
+        technician = Technician_signup.objects.get(user=request.user)
+    except Technician_signup.DoesNotExist:
+        return redirect('technician_login')
+
+    from core.services.technician_wallet import TechnicianWalletService
+    wallet = TechnicianWalletService.get_or_create_wallet(technician)
+
+    # Fetch transactions and withdrawals
+    transactions = wallet.transactions.all() # type: ignore
+    withdrawals = technician.withdrawals.all() # type: ignore
+    incentives = technician.incentive_awards.all() # type: ignore
+
+    context = {
+        'technician': technician,
+        'wallet': wallet,
+        'transactions': transactions,
+        'withdrawals': withdrawals,
+        'incentives': incentives,
+    }
+    return render(request, 'technician/wallet_t.html', context)
+
+@login_required(login_url='technician_login')
+def technician_request_withdrawal(request):
+    if request.method == "POST":
+        try:
+            technician = Technician_signup.objects.get(user=request.user)
+            amount = float(request.POST.get('amount', 0))
+            
+            from core.services.technician_wallet import TechnicianWalletService
+            TechnicianWalletService.request_withdrawal(technician, amount)
+            
+            return redirect('technician_wallet')
+        except ValueError as e:
+            print("Withdrawal Error:", str(e))
+        except Exception as e:
+            print("Withdrawal Error:", str(e))
+    return redirect('technician_wallet')

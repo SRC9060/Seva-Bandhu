@@ -134,6 +134,17 @@
         }
     }
 
+    function applyMissionProgress() {
+        document.querySelectorAll('.mission-progress-fill').forEach(el => {
+            const value = Number(el.dataset.progress || 0);
+            if (!Number.isNaN(value)) {
+                el.style.width = `${value}%`;
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', applyMissionProgress);
+
     function removeNotificationByRequest(requestId) {
         const buttons = document.querySelectorAll('[data-request-id]');
         buttons.forEach(button => {
@@ -490,6 +501,35 @@
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
     }
 
+    .mission-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        background: #ffffff;
+    }
+
+    .mission-card-completed {
+        background: #f0fdf4;
+    }
+
+    .mission-card-active {
+        background: #ffffff;
+    }
+
+    .mission-progress-bar {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .mission-progress-fill {
+        height: 100%;
+        background: #2563eb;
+        width: 0;
+        transition: width 0.2s ease;
+    }
+
     .notification-card-header {
         display: flex;
         justify-content: space-between;
@@ -664,7 +704,8 @@
                 {% if technician.active_warning_count > 0 %}
                 <span onclick="openWarningsModal()"
                     style="cursor:pointer; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:12px; font-weight:600; font-size:12px; margin-left:6px; transition:opacity 0.2s;"
-                    onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">⚠️ {{ technician.active_warning_count }} Warnings (View)</span>
+                    onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">⚠️ {{
+                    technician.active_warning_count }} Warnings (View)</span>
                 {% endif %}
             </p>
         </div>
@@ -676,6 +717,16 @@
                         d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
                 My Assigned Jobs
+            </a>
+
+            <a href="{% url 'technician_wallet' %}" class="btn-action"
+                style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M21 12V7H5a2 2 0 0 1 2-2h14v4" />
+                    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                </svg>
+                Wallet (₹{{ wallet.available_balance|default:"0.00" }})
             </a>
 
             {% if not technician.profile_completed %}
@@ -758,6 +809,106 @@
         </div>
     </div>
 
+    <!-- Earnings & Missions Section -->
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 32px;">
+        <!-- Earnings Summary -->
+        <div class="panel-card" style="margin-bottom: 0;">
+            <div class="panel-header">
+                <h3>Earnings Summary</h3>
+            </div>
+            <div style="padding: 16px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                    <span style="color: #64748b; font-weight: 600;">Available Balance:</span>
+                    <span style="font-weight: 800; color: #0f172a;">₹{{ wallet.available_balance|default:"0.00"
+                        }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                    <span style="color: #64748b; font-weight: 600;">Today's Earnings:</span>
+                    <span style="font-weight: 800; color: #0f172a;">₹{{ todays_earnings|default:"0.00" }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-weight: 600;">Total Incentives:</span>
+                    <span style="font-weight: 800; color: #15803d;">₹{{ wallet.total_incentive_earnings|default:"0.00"
+                        }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                <a href="{% url 'technician_wallet' %}" class="btn-action btn-action-primary"
+                    style="width: 100%; text-align: center; justify-content: center;">
+                    View Full Wallet
+                </a>
+            </div>
+        </div>
+
+        <!-- Active Missions -->
+        <div class="panel-card" style="margin-bottom: 0;">
+            <div class="panel-header">
+                <h3>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    Active Missions
+                </h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;">
+                {% if active_missions %}
+                {% for mission in active_missions %}
+                <div
+                    class="mission-card {% if mission.completed %}mission-card-completed{% else %}mission-card-active{% endif %}">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <div>
+                            <h4 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #0f172a;">{{
+                                mission.name }}</h4>
+                            <p style="margin: 0; font-size: 13px; color: #64748b;">{{ mission.description }}</p>
+                        </div>
+                        <div
+                            style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 6px;">
+                            Reward: ₹{{ mission.reward_amount }}
+                        </div>
+                    </div>
+
+                    {% if mission.completed %}
+                    <div
+                        style="color: #15803d; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        Mission Completed! ₹{{ mission.reward_amount }} Earned.
+                    </div>
+                    {% else %}
+                    <div style="margin-bottom: 8px;">
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #475569;">
+                            <span>Progress: {{ mission.current_progress }} / {{ mission.target|default:mission.threshold
+                                }}</span>
+                            <span>{{ mission.percentage }}%</span>
+                        </div>
+                        <div class="mission-progress-bar">
+                            <div class="mission-progress-fill" data-progress="{{ mission.percentage }}"></div>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; font-weight: 600; color: #64748b;">
+                        {{ mission.remaining }} more to earn ₹{{ mission.reward_amount }}
+                        {% if mission.end_date %}
+                        &nbsp;|&nbsp; Valid until {{ mission.end_date|date:"M d, Y" }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color: #94a3b8; font-size: 14px; text-align: center; padding: 20px 0;">No active missions
+                    available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- Panel Card: Real-Time Notifications -->
     <div class="panel-card">
         <div class="panel-header">
@@ -833,7 +984,8 @@
             </div>
             <div class="profile-field-item">
                 <label>Performance Rating</label>
-                <value>⭐ {{ technician.final_rating }} / 5 <span style="font-size:11px; color:#64748b;">({{ technician.rating_count }} Reviews)</span></value>
+                <value>⭐ {{ technician.final_rating }} / 5 <span style="font-size:11px; color:#64748b;">({{
+                        technician.rating_count }} Reviews)</span></value>
             </div>
             <div class="profile-field-item">
                 <label>Active Warnings</label>
@@ -909,106 +1061,107 @@
             {% for warning in technician.warnings.all %}
             {% if warning.status == 'ACTIVE' %}
             <div style="background:#f8fafc; border:1px solid #fca5a5; border-radius:12px; padding:16px;">
-            {% else %}
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
-            {% endif %}
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                    <div>
-                        <strong style="color:#0f172a; font-size:14.5px; display:block; margin-bottom:4px;">
-                            Warning Date: {{ warning.created_at|date:"M d, Y" }}
-                        </strong>
-                        <span style="font-size:12.5px; color:#64748b; font-family:ui-monospace, monospace;">
-                            {% if warning.support_ticket and warning.support_ticket.service_request_id %}
-                            Booking ID: #{{ warning.support_ticket.service_request_id }}
+                {% else %}
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                    {% endif %}
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div>
+                            <strong style="color:#0f172a; font-size:14.5px; display:block; margin-bottom:4px;">
+                                Warning Date: {{ warning.created_at|date:"M d, Y" }}
+                            </strong>
+                            <span style="font-size:12.5px; color:#64748b; font-family:ui-monospace, monospace;">
+                                {% if warning.support_ticket and warning.support_ticket.service_request_id %}
+                                Booking ID: #{{ warning.support_ticket.service_request_id }}
+                                {% else %}
+                                Booking ID: N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if warning.status == 'ACTIVE' %}
+                        <span
+                            style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:#fee2e2; color:#b91c1c;">
                             {% else %}
-                            Booking ID: N/A
-                            {% endif %}
-                        </span>
+                            <span
+                                style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:#f1f5f9; color:#64748b;">
+                                {% endif %}
+                                {{ warning.status }}
+                            </span>
                     </div>
+
+                    {% if warning.support_ticket %}
+                    <div style="margin-bottom:12px;">
+                        <span
+                            style="display:block; font-size:12px; color:#475569; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Customer
+                            Complaint</span>
+                        <p class="complaint-text-block"
+                            style="margin:0; font-size:13.5px; color:#334155; line-height:1.5; background:#fff; padding:10px; border-radius:8px; border:1px solid #e2e8f0; white-space: pre-wrap;">
+                            {{ warning.support_ticket.description|default:"No description provided." }}</p>
+                    </div>
+                    {% endif %}
+
                     {% if warning.status == 'ACTIVE' %}
-                    <span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:#fee2e2; color:#b91c1c;">
-                        {{ warning.status }}
-                    </span>
-                    {% else %}
-                    <span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:#f1f5f9; color:#64748b;">
-                        {{ warning.status }}
-                    </span>
+                    <div
+                        style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:12.5px; color:#b91c1c; font-weight:600;">
+                        Penalty Applied: -{{ warning.penalty_points }} Rating Point
+                    </div>
                     {% endif %}
                 </div>
-
-                {% if warning.support_ticket %}
-                <div style="margin-bottom:12px;">
-                    <span
-                        style="display:block; font-size:12px; color:#475569; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Customer
-                        Complaint</span>
-                    <p class="complaint-text-block"
-                        style="margin:0; font-size:13.5px; color:#334155; line-height:1.5; background:#fff; padding:10px; border-radius:8px; border:1px solid #e2e8f0; white-space: pre-wrap;">
-                        {{ warning.support_ticket.description|default:"No description provided." }}</p>
-                </div>
-                {% endif %}
-
-                {% if warning.status == 'ACTIVE' %}
+                {% empty %}
                 <div
-                    style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:12.5px; color:#b91c1c; font-weight:600;">
-                    Penalty Applied: -{{ warning.penalty_points }} Rating Point
+                    style="text-align:center; padding:30px; color:#94a3b8; font-size:14px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
+                    No warnings have been issued. Keep up the great work!
                 </div>
-                {% endif %}
+                {% endfor %}
             </div>
-            {% empty %}
-            <div
-                style="text-align:center; padding:30px; color:#94a3b8; font-size:14px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
-                No warnings have been issued. Keep up the great work!
-            </div>
-            {% endfor %}
-        </div>
 
-        <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-            <button class="btn-action btn-action-outline" onclick="closeWarningsModal()">Close</button>
+            <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                <button class="btn-action btn-action-outline" onclick="closeWarningsModal()">Close</button>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    function openWarningsModal() {
-        document.getElementById('warningsModal').classList.add('show');
-        document.body.style.overflow = 'hidden';
+    <script>
+        function openWarningsModal() {
+            document.getElementById('warningsModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
 
-        // Auto-format raw complaint text if it mashes Category and remark together
-        document.querySelectorAll('.complaint-text-block').forEach(block => {
-            if (!block.dataset.formatted) {
-                let text = block.innerHTML.trim();
+            // Auto-format raw complaint text if it mashes Category and remark together
+            document.querySelectorAll('.complaint-text-block').forEach(block => {
+                if (!block.dataset.formatted) {
+                    let text = block.innerHTML.trim();
 
-                if (text.includes('Category:')) {
-                    // Split by newlines to see if they separated category and remark
-                    let lines = text.split('\n');
-                    let newHtml = '';
-                    let remarkAdded = false;
+                    if (text.includes('Category:')) {
+                        // Split by newlines to see if they separated category and remark
+                        let lines = text.split('\n');
+                        let newHtml = '';
+                        let remarkAdded = false;
 
-                    for (let i = 0; i < lines.length; i++) {
-                        let line = lines[i].trim();
-                        if (line.startsWith('Category:')) {
-                            newHtml += line.replace('Category:', '<strong style="color:#0f172a;">Category:</strong>') + '<br>';
-                        } else if (line !== '') {
-                            if (!remarkAdded && !line.startsWith('Remark:') && !line.startsWith('Details:')) {
-                                newHtml += '<br><strong style="color:#0f172a;">Customer Remark:</strong><br>' + line + '<br>';
-                                remarkAdded = true;
-                            } else {
-                                newHtml += line + '<br>';
+                        for (let i = 0; i < lines.length; i++) {
+                            let line = lines[i].trim();
+                            if (line.startsWith('Category:')) {
+                                newHtml += line.replace('Category:', '<strong style="color:#0f172a;">Category:</strong>') + '<br>';
+                            } else if (line !== '') {
+                                if (!remarkAdded && !line.startsWith('Remark:') && !line.startsWith('Details:')) {
+                                    newHtml += '<br><strong style="color:#0f172a;">Customer Remark:</strong><br>' + line + '<br>';
+                                    remarkAdded = true;
+                                } else {
+                                    newHtml += line + '<br>';
+                                }
                             }
                         }
+
+                        block.innerHTML = newHtml;
                     }
-
-                    block.innerHTML = newHtml;
+                    block.dataset.formatted = "true";
                 }
-                block.dataset.formatted = "true";
-            }
-        });
-    }
+            });
+        }
 
-    function closeWarningsModal() {
-        document.getElementById('warningsModal').classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
-</script>
+        function closeWarningsModal() {
+            document.getElementById('warningsModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+    </script>
 
-{% endblock %}
+    {% endblock %}
