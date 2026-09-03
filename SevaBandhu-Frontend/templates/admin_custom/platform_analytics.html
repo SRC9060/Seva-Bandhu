@@ -298,8 +298,7 @@
                 <td>
                     {% if data.booking_count > 0 %}
                     <span
-                        class="badge {% if data.complaint_rate_percent > 5.0 %}badge-danger{% else %}badge-success{% endif %}">{{
-                        data.complaint_rate_percent }}%</span>
+                        class="badge {% if data.complaint_rate_percent > 5.0 %}badge-danger{% else %}badge-success{% endif %}">{{ data.complaint_rate_percent }}%</span>
                     {% else %}
                     <span style="color:#94a3b8;">N/A</span>
                     {% endif %}
@@ -331,8 +330,7 @@
                 <line x1="7" y1="7" x2="7.01" y2="7" />
             </svg>
             <div class="metric-title">Active Offers</div>
-            <div class="metric-value">{{ active_offers }} <span style="font-size:16px; color:#60a5fa;">/ {{ total_offers
-                    }}</span></div>
+            <div class="metric-value">{{ active_offers }} <span style="font-size:16px; color:#60a5fa;">/ {{ total_offers }}</span></div>
         </div>
         <div class="metric-card card-purple">
             <svg class="metric-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6"
@@ -424,8 +422,7 @@
                 <td>{{ item.viewed }}</td>
                 <td>{{ item.redeemed }}</td>
                 <td><span
-                        class="badge {% if item.redemption_rate > 20 %}badge-success{% else %}badge-info{% endif %}">{{
-                        item.redemption_rate }}%</span></td>
+                        class="badge {% if item.redemption_rate > 20 %}badge-success{% else %}badge-info{% endif %}">{{ item.redemption_rate }}%</span></td>
                 <td>{{ item.bookings }}</td>
                 <td style="color:#15803d; font-weight:800;">₹{{ item.revenue }}</td>
             </tr>

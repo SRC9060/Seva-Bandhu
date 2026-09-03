@@ -291,8 +291,7 @@
 
                     <div class="job-info-item">
                         <span class="job-info-label">Preferred Slot</span>
-                        <span class="job-info-val">{{ job.service_detail.preferred_service_date }} • {{
-                            job.service_detail.preferred_time_slot }}</span>
+                        <span class="job-info-val">{{ job.service_detail.preferred_service_date }} • {{ job.service_detail.preferred_time_slot }}</span>
                     </div>
 
                     <div class="job-info-item">
@@ -339,6 +338,22 @@
                     </svg>
                     Open Live Navigation Map
                 </a>
+
+                <a href="{% url 'service_request_chat' job.id %}" id="chat-btn-{{ job.id }}"
+                    class="btn-action btn-action-primary"
+                    {% if not job.tracking_active and job.status != 'In Progress' %}
+                    style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); display: none;"
+                    {% else %}
+                    style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);"
+                    {% endif %}>
+                    💬 Chat with Customer
+                </a>
+            </div>
+            {% else %}
+            <div class="job-actions-cluster">
+                <a href="{% url 'service_request_chat' job.id %}" class="btn-action btn-action-outline">
+                    💬 View Chat History
+                </a>
             </div>
             {% endif %}
 
@@ -372,7 +387,11 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === "success") {
-                    alert("🚀 Journey Started! Broadcasting live GPS coordinates to customer.");
+                    alert("🚀 Journey Started! Broadcasting live GPS coordinates. Chat is now active.");
+
+                    // Reveal chat button safely without reloading to preserve websocket
+                    const chatBtn = document.getElementById("chat-btn-" + jobId);
+                    if (chatBtn) chatBtn.style.display = "flex";
 
                     navigator.geolocation.getCurrentPosition(
                         (position) => {
@@ -384,6 +403,8 @@
                             alert("Please allow location permission.");
                         }
                     );
+                } else {
+                    alert("Error: " + data.message);
                 }
             });
     }

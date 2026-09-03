@@ -186,13 +186,11 @@
                     style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <input type="radio" name="payment_method_choice" value="wallet"
-                            style="width: 18px; height: 18px; accent-color: #2563eb;" {% if customer.wallet_balance <
-                            service_request.amount %}disabled{% endif %}>
+                            style="width: 18px; height: 18px; accent-color: #2563eb;" {% if customer.wallet_balance < service_request.amount %}disabled{% endif %}>
                         <div>
                             <span style="font-weight: 600; font-size: 14.5px; color: #0f172a; display: block;">Seva
                                 Bandhu Wallet</span>
-                            <span style="font-size: 13px; color: #64748b;">Balance: ₹{{ customer.wallet_balance
-                                }}</span>
+                            <span style="font-size: 13px; color: #64748b;">Balance: ₹{{ customer.wallet_balance }}</span>
                         </div>
                     </div>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2">

@@ -56,8 +56,7 @@
                         {% if co.redeemed %}
                         <span
                             style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">Redeemed</span>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">{{ co.redeemed_at|date:"M d, g:i
-                            A" }}</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">{{ co.redeemed_at|date:"M d, g:i A" }}</div>
                         {% elif co.is_expired %}
                         <span
                             style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">Expired</span>

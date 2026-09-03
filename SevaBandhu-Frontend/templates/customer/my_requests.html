@@ -544,10 +544,8 @@
                         <div class="tech-avatar-mini">{{ technician.username|upper|first }}</div>
                         <div style="font-size:13px;">
                             <strong>Technician: {{ technician.username }} <span
-                                    style="color:#eab308; margin-left:6px; font-weight:700;">⭐ {{
-                                    technician.final_rating }} / 5</span></strong>
-                            <span style="color:#64748b; display:block; font-size:11.5px;">Contact: {{ technician.contact
-                                }}</span>
+                                    style="color:#eab308; margin-left:6px; font-weight:700;">⭐ {{ technician.final_rating }} / 5</span></strong>
+                            <span style="color:#64748b; display:block; font-size:11.5px;">Contact: {{ technician.contact }}</span>
                         </div>
                     </div>
                     {% else %}
@@ -556,8 +554,7 @@
                 </div>
 
                 <div class="action-buttons-group">
-                    {% if request.status == 'In Progress' or request.status == 'Accepted' or request.status ==
-                    'Assigned' %}
+                    {% if request.status == 'In Progress' or request.status == 'Accepted' or request.status == 'Assigned' %}
                     <a href="{% url 'customer_tracking' request.id %}" class="btn-card-action btn-action-blue">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
@@ -566,9 +563,27 @@
                         </svg>
                         Track Technician
                     </a>
+
+                    {% if request.tracking_active or request.status == 'In Progress' %}
+                    <a href="{% url 'service_request_chat' request.id %}" class="btn-card-action"
+                        style="background:#0284c7; color:#fff;">
+                        💬 Chat with Technician
+                    </a>
+                    {% else %}
+                    <span class="btn-card-action"
+                        style="background:#f1f5f9; color:#64748b; border: 1px solid #e2e8f0; cursor: not-allowed;"
+                        title="Chat becomes available when your technician starts the journey.">
+                        💬 Chat Unavailable
+                    </span>
+                    {% endif %}
+
                     {% endif %}
 
                     {% if request.status == 'Completed' and technician %}
+                    <a href="{% url 'service_request_chat' request.id %}" class="btn-card-action btn-action-gray">
+                        💬 View Chat History
+                    </a>
+
                     {% if rating %}
                     <span class="btn-card-action" style="background:#fef9c3; color:#a16207; border:1px solid #fef08a;">
                         ⭐ {{ rating.rating }} / 5 Rated

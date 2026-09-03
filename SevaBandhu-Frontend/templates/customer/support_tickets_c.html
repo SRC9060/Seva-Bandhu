@@ -205,8 +205,7 @@
                 <div
                     style="display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:#64748b; background:#f8fafc; padding:12px 16px; border-radius:8px;">
                     <div>
-                        <strong style="color:#475569;">Date:</strong> {{ ticket.created_at|date:"M d, Y h:i
-                        A"|default:"Recently" }}
+                        <strong style="color:#475569;">Date:</strong> {{ ticket.created_at|date:"M d, Y h:i A"|default:"Recently" }}
                     </div>
                     {% if ticket.service_request_id %}
                     <div>

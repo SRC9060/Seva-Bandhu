@@ -907,14 +907,12 @@
                                     <span class="req-tag">#REQ-{{ item.request.id }}</span>
                                 </td>
                                 <td>
-                                    <strong style="color: #0f172a;">{{ item.request.service_detail.service_category
-                                        }}</strong>
+                                    <strong style="color: #0f172a;">{{ item.request.service_detail.service_category }}</strong>
                                 </td>
                                 <td>
                                     {% if item.technician %}
                                     <span style="font-weight:600;">{{ item.technician.username }}</span>
-                                    <span style="color:#eab308; font-size:12px; margin-left:4px; font-weight:700;">⭐ {{
-                                        item.technician.final_rating }}</span>
+                                    <span style="color:#eab308; font-size:12px; margin-left:4px; font-weight:700;">⭐ {{ item.technician.final_rating }}</span>
                                     {% else %}
                                     <span style="color: #94a3b8; font-size: 12.5px;">Unassigned</span>
                                     {% endif %}
@@ -933,12 +931,10 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span style="color: #64748b; font-size: 13px;">{{
-                                        item.request.service_detail.preferred_service_date|date:"d M Y" }}</span>
+                                    <span style="color: #64748b; font-size: 13px;">{{ item.request.service_detail.preferred_service_date|date:"d M Y" }}</span>
                                 </td>
                                 <td>
-                                    {% if item.request.status == 'In Progress' or item.request.status == 'Accepted' or
-                                    item.request.status == 'Assigned' %}
+                                    {% if item.request.status == 'In Progress' or item.request.status == 'Accepted' or item.request.status == 'Assigned' %}
                                     <a href="{% url 'customer_tracking' item.request.id %}"
                                         class="btn-table-action btn-table-action-primary">
                                         Track
@@ -1021,8 +1017,7 @@
         <h2
             style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 26px; font-weight: 800; color: #0f172a; margin: 0 0 12px 0;">
             {{ welcome_offer.offer.title }}</h2>
-        <p style="font-size: 15px; color: #475569; margin: 0 0 24px 0; line-height: 1.5;">{{
-            welcome_offer.offer.description }}</p>
+        <p style="font-size: 15px; color: #475569; margin: 0 0 24px 0; line-height: 1.5;">{{ welcome_offer.offer.description }}</p>
 
         <div
             style="background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
@@ -1103,8 +1098,7 @@
                         <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b; font-style: italic;">
                             {{ item.reason }}
                         </p>
-                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #15803d; font-weight: 600;">Starts at ₹{{
-                            item.service.price }}</p>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #15803d; font-weight: 600;">Starts at ₹{{ item.service.price }}</p>
                     </div>
                 </div>
                 <a href="{% url 'customer_create_request' %}?service={{ item.service.name|urlencode }}&rec=1"

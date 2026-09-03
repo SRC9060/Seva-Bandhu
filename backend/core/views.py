@@ -173,6 +173,17 @@ def technician_update_status(request):
 
             # [FIRE] MAIN FIX — HANDLE AVAILABILITY
             if new_status == "Completed":
+                # Close chat
+                from core.models import ChatConversation
+                from django.utils import timezone
+                try:
+                    chat = ChatConversation.objects.get(service_request=job)
+                    chat.is_active = False
+                    chat.closed_at = timezone.now()
+                    chat.save()
+                except ChatConversation.DoesNotExist:
+                    pass
+
                 if job.payment_method == 'offline' and job.payment_status == 'pending':
                     job.payment_status = 'paid'
                     job.save()
@@ -235,7 +246,7 @@ def technician_sign_up(request):
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                password=''  # Password hashes live only on Django's User model.
+                password=password
             )
 
             # Create technician profile with all fields
@@ -244,7 +255,7 @@ def technician_sign_up(request):
                 username=username,
                 email=email,
                 contact=contact,
-                password=password
+                password=''
             )
 
             return redirect('technician_login')
@@ -704,8 +715,8 @@ def customer_create_request(request):
                 from core.models import RecommendationLog
                 log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
                 if log and not log.booked:
-                    log.booked = True
                     from django.utils import timezone
+                    log.booked = True
                     log.booked_at = timezone.now()
                     log.save(update_fields=['booked', 'booked_at'])
                     
@@ -731,24 +742,25 @@ def customer_create_request(request):
 
             # Broadcast new request to connected technicians
             channel_layer = get_channel_layer()
-            print("[FIRE] BROADCASTING NEW REQUEST")
-            async_to_sync(channel_layer.group_send)( # type: ignore
-                'technicians',   # keep same group if you are using it
-                {
-                    'type': 'new_request',
-                    'content': {
+            if channel_layer:
+                print("[FIRE] BROADCASTING NEW REQUEST")
+                async_to_sync(channel_layer.group_send)(
+                    'technicians',   # keep same group if you are using it
+                    {
                         'type': 'new_request',
-                        'request_id': service_request.id,
-                        'service_category': service_detail.service_category,
-                        'city': service_address.city,
-                        'priority': service_detail.priority,
-                        'problem_description': service_detail.problem_description,
-                        'preferred_date': str(service_detail.preferred_service_date),
-                        'preferred_time': service_detail.preferred_time_slot,
-                        'address': service_address.street_area,
+                        'content': {
+                            'type': 'new_request',
+                            'request_id': service_request.id,
+                            'service_category': service_detail.service_category,
+                            'city': service_address.city,
+                            'priority': service_detail.priority,
+                            'problem_description': service_detail.problem_description,
+                            'preferred_date': str(service_detail.preferred_service_date),
+                            'preferred_time': service_detail.preferred_time_slot,
+                            'address': service_address.street_area,
+                        }
                     }
-                }
-            )
+                )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -1059,10 +1071,12 @@ def customer_logout(request):
 
 
 from .models import Service
+from core.services.rating_engine import ServiceRatingEngine
 
 def service_selection(request):
 
     services = Service.objects.all()
+    service_ratings = ServiceRatingEngine.get_all_service_ratings()
 
     service_list = []
 
@@ -1075,12 +1089,22 @@ def service_selection(request):
 
         # [FIRE] final decision
         is_active = service.is_enabled and available
+        
+        rating_info = service_ratings.get(service.name, {
+            "has_data": False,
+            "rating": 0.0,
+            "booking_count": 0,
+            "validated_complaint_count": 0,
+            "complaint_rate": 0.0,
+            "complaint_rate_percent": 0.0
+        })
 
         service_list.append({
             'name': service.name,
             'image': service.image,
             'price': service.price,
-            'is_active': is_active
+            'is_active': is_active,
+            'rating_info': rating_info
         })
 
     return render(request, 'customer/service_selection.html', {
@@ -1151,16 +1175,15 @@ def accept_request(request, id):
 
         # [FIRE] REALTIME REMOVE NOTIFICATION
         channel_layer = get_channel_layer()
-
-        print("[FIRE] SENDING notification_removed EVENT")
-
-        async_to_sync(channel_layer.group_send)( # type: ignore
-            'technicians',
-            {
-                'type': 'notification_removed',
-                'request_id': service_request.id,
-            }
-        )
+        if channel_layer:
+            print("[FIRE] SENDING notification_removed EVENT")
+            async_to_sync(channel_layer.group_send)(
+                'technicians',
+                {
+                    'type': 'notification_removed',
+                    'request_id': service_request.id,
+                }
+            )
 
     return JsonResponse({'status': 'success'})
 
@@ -1205,20 +1228,37 @@ def customer_tracking(request, id):
         'service_request': service_request
     })
 def start_tracking(request, id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'})
+    
+    try:
+        technician = Technician_signup.objects.get(user=request.user)
+    except Technician_signup.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Not a technician'})
 
     service_request = get_object_or_404(
         ServiceRequest,
-        id=id
+        id=id,
+        technician_username=technician.username
     )
 
-    service_request.tracking_active = True
+    if service_request.status not in ['Assigned', 'In Progress']:
+        return JsonResponse({'status': 'error', 'message': 'Cannot start journey for this request'})
 
+    service_request.tracking_active = True
     service_request.save()
+
+    # Create/activate ChatConversation
+    from core.models import ChatConversation
+    chat, created = ChatConversation.objects.get_or_create(service_request=service_request, defaults={'is_active': True})
+    if not created and not chat.is_active:
+        chat.is_active = True
+        chat.closed_at = None
+        chat.save()
 
     return JsonResponse({
         'status': 'success'
     })
-
 
 def generate_invoice_pdf(service):
     print('📄 generate_invoice_pdf called for service:', service.id)
@@ -1381,7 +1421,7 @@ def customer_google_auth(request):
                 random.randint(1000,9999)
             )
 
-            password = secrets.token_urlsafe(10)
+            password = secrets.token_urlsafe(12)
 
             user = User.objects.create_user(
 
@@ -1441,6 +1481,9 @@ def verify_email(request, token):
         'success': True, 'message': 'Your email is verified. You can now log in.'
     })
 
+
+
+@csrf_exempt
 def verify_email_code(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'failed', 'message': 'POST required.'})
@@ -1466,6 +1509,7 @@ def verify_email_code(request):
     return JsonResponse({'status': 'success', 'message': 'Email verified.'})
 
 
+@csrf_exempt
 def send_verification_email(request):
     if request.method != "POST":
         return JsonResponse({
@@ -1497,8 +1541,6 @@ def send_verification_email(request):
             'message': 'We could not send the verification email. Check the email settings and try again.'
         })
     return JsonResponse({'status': 'success', 'message': 'A 6-digit code has been sent to your email.'})
-
-
 
 
 @csrf_exempt
@@ -1778,6 +1820,52 @@ def submit_technician_rating(request):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
+@login_required(login_url='customer_login')
+def service_request_chat(request, id):
+    from core.models import ServiceRequest, ChatConversation, ChatMessage
+    service_request = get_object_or_404(ServiceRequest, id=id)
+
+    # Determine user role
+    role = None
+    if request.user.username == service_request.customer_username:
+        role = 'customer'
+    elif request.user.username == service_request.technician_username:
+        role = 'technician'
+    
+    if not role:
+        return HttpResponseForbidden("You do not have access to this chat.")
+
+    if service_request.status == 'Pending':
+        return render(request, 'chat.html', {
+            'error': 'Chat is unavailable until a technician is assigned.',
+            'role': role,
+            'request_id': id,
+            'service_request': service_request
+        })
+
+    if service_request.status == 'Assigned' and not getattr(service_request, 'tracking_active', False):
+        return render(request, 'chat.html', {
+            'error': 'Chat is unavailable until the technician starts the journey.',
+            'role': role,
+            'request_id': id,
+            'service_request': service_request
+        })
+
+    conversation, created = ChatConversation.objects.get_or_create(
+        service_request=service_request,
+        defaults={'is_active': service_request.status != 'Completed'}
+    )
+    
+    messages = ChatMessage.objects.filter(conversation=conversation).order_by('created_at')
+
+    context = {
+        'role': role,
+        'request_id': id,
+        'service_request': service_request,
+        'conversation': conversation,
+        'chat_messages': messages,
+    }
+    return render(request, 'chat.html', context)
 @login_required(login_url='customer_login')
 def submit_complaint(request):
     if request.method == "POST":

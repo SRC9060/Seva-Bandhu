@@ -509,8 +509,7 @@
                 <h3 class="card-service-title" style="margin-bottom: 4px;">{{ service.name }}</h3>
                 {% if service.rating_info.has_data %}
                 <div style="font-size: 11.5px; color: #64748b; margin-bottom: 12px; font-weight: 500;">
-                    Based on {{ service.rating_info.booking_count }} completed {% if service.rating_info.booking_count
-                    == 1 %}service{% else %}services{% endif %}
+                    Based on {{ service.rating_info.booking_count }} completed {% if service.rating_info.booking_count == 1 %}service{% else %}services{% endif %}
                 </div>
                 {% else %}
                 <div style="font-size: 11.5px; color: #64748b; margin-bottom: 12px; font-weight: 500;">

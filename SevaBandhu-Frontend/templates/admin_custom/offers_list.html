@@ -93,21 +93,18 @@
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                     <td style="padding: 16px;">
                         <strong style="color: #0f172a; display: block;">{{ offer.title }}</strong>
-                        <span style="color: #64748b; font-size: 12px;">{{ offer.applicable_service.name|default:"Global
-                            Offer" }}</span>
+                        <span style="color: #64748b; font-size: 12px;">{{ offer.applicable_service.name|default:"Global Offer" }}</span>
                     </td>
                     <td style="padding: 16px;">
                         <code
                             style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #2563eb; font-size: 12px; border: 1px solid #e2e8f0;">{{ offer.code }}</code>
                     </td>
                     <td style="padding: 16px; color: #15803d; font-weight: 600;">
-                        {% if offer.discount_type == 'PERCENTAGE' %}{{ offer.discount_value }}%{% else %}₹{{
-                        offer.discount_value }}{% endif %}
+                        {% if offer.discount_type == 'PERCENTAGE' %}{{ offer.discount_value }}%{% else %}₹{{ offer.discount_value }}{% endif %}
                     </td>
                     <td style="padding: 16px;">
                         <span
-                            style="font-size: 12px; font-weight: 600; color: #475569; background: #e2e8f0; padding: 4px 8px; border-radius: 12px;">{{
-                            offer.get_target_segment_display }}</span>
+                            style="font-size: 12px; font-weight: 600; color: #475569; background: #e2e8f0; padding: 4px 8px; border-radius: 12px;">{{ offer.get_target_segment_display }}</span>
                     </td>
                     <td style="padding: 16px;">
                         {% if offer.active %}

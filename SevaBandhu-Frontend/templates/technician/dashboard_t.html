@@ -664,8 +664,7 @@
                 {% if technician.active_warning_count > 0 %}
                 <span onclick="openWarningsModal()"
                     style="cursor:pointer; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:12px; font-weight:600; font-size:12px; margin-left:6px; transition:opacity 0.2s;"
-                    onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">⚠️ {{
-                    technician.active_warning_count }} Warnings (View)</span>
+                    onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">⚠️ {{ technician.active_warning_count }} Warnings (View)</span>
                 {% endif %}
             </p>
         </div>
@@ -834,8 +833,7 @@
             </div>
             <div class="profile-field-item">
                 <label>Performance Rating</label>
-                <value>⭐ {{ technician.final_rating }} / 5 <span style="font-size:11px; color:#64748b;">({{
-                        technician.rating_count }} Reviews)</span></value>
+                <value>⭐ {{ technician.final_rating }} / 5 <span style="font-size:11px; color:#64748b;">({{ technician.rating_count }} Reviews)</span></value>
             </div>
             <div class="profile-field-item">
                 <label>Active Warnings</label>
