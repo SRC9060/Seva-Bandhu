@@ -75,16 +75,22 @@ class Technician_signup(models.Model):
     @property
     def raw_average_rating(self):
         from django.db.models import Avg
-        result = self.ratings.aggregate(Avg('rating'))['rating__avg'] # type: ignore
+        from django.apps import apps
+        TechnicianRating = apps.get_model('core', 'TechnicianRating')
+        result = TechnicianRating.objects.filter(technician=self).aggregate(Avg('rating'))['rating__avg']
         return round(result, 1) if result else 0.0
 
     @property
     def rating_count(self):
-        return self.ratings.count() # type: ignore
+        from django.apps import apps
+        TechnicianRating = apps.get_model('core', 'TechnicianRating')
+        return TechnicianRating.objects.filter(technician=self).count()
 
     @property
     def active_warning_count(self):
-        return self.warnings.filter(status='ACTIVE').count() # type: ignore
+        from django.apps import apps
+        TechnicianWarning = apps.get_model('core', 'TechnicianWarning')
+        return TechnicianWarning.objects.filter(technician=self, status='ACTIVE').count()
 
     @property
     def final_rating(self):
@@ -161,6 +167,12 @@ class ServiceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tracking_active = models.BooleanField(default=False)
+    technician_latitude = models.FloatField(null=True, blank=True)
+    technician_longitude = models.FloatField(null=True, blank=True)
+    route_distance_meters = models.FloatField(null=True, blank=True)
+    route_eta_seconds = models.FloatField(null=True, blank=True)
+    tracking_arrived = models.BooleanField(default=False)
+    tracking_updated_at = models.DateTimeField(null=True, blank=True)
     
     customer_latitude = models.FloatField(
         null=True,
@@ -403,8 +415,6 @@ class CustomerOffer(models.Model):
         # 3. Eligibility check (New Customer offer but user has booked)
         if self.offer.target_segment == 'NEW_CUSTOMER':
             # Avoid circular import at class level if needed, but it's safe inside method
-            from django.apps import apps
-            ServiceRequest = apps.get_model('core', 'ServiceRequest')
             has_booked = ServiceRequest.objects.filter(
                 customer_username=self.customer.username,
                 status__in=['Pending', 'Accepted', 'Assigned', 'In Progress', 'Completed']

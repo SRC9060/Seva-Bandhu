@@ -390,23 +390,23 @@ def customer_dashboard(request):
     technicians_list = []
     
     for service_request in service_requests:
-        request_data = {
-            'request': service_request,
-            'technician': None
-        }
+        technician_obj = None
         
         # If technician is assigned, fetch technician details
         if service_request.technician_username:
             try:
-                technician = Technician_signup.objects.get(username=service_request.technician_username)
-                request_data['technician'] = technician # type: ignore
+                technician_obj = Technician_signup.objects.get(username=service_request.technician_username)
                 
                 # Collect unique technicians
-                if technician not in technicians_list:
-                    technicians_list.append(technician)
+                if technician_obj not in technicians_list:
+                    technicians_list.append(technician_obj)
             except Technician_signup.DoesNotExist:
                 pass
         
+        request_data = {
+            'request': service_request,
+            'technician': technician_obj
+        }
         requests_with_technicians.append(request_data)
     
     # Calculate statistics
@@ -727,10 +727,10 @@ def customer_create_request(request):
                 applied_offer=applied_offer
             )
             
+            from django.utils import timezone
             # [FIRE] RECORD OFFER USAGE
             if applied_offer:
                 from core.models import CustomerOffer
-                from django.utils import timezone
                 cust_offer, _ = CustomerOffer.objects.get_or_create(customer=customer, offer=applied_offer)
                 cust_offer.redeemed = True
                 cust_offer.redeemed_at = timezone.now()
@@ -738,7 +738,6 @@ def customer_create_request(request):
             
             # Log booking if from recommendation
             if from_rec and selected_service:
-                from django.utils import timezone
                 from core.models import RecommendationLog
                 log = RecommendationLog.objects.filter(customer=customer, service__name=selected_service).order_by('-created_at').first()
                 if log and not log.booked:
@@ -771,7 +770,7 @@ def customer_create_request(request):
             print("[FIRE] BROADCASTING NEW REQUEST")
             if channel_layer:
                 async_to_sync(channel_layer.group_send)(
-                'technicians',   # keep same group if you are using it
+                    'technicians',   # keep same group if you are using it
                 {
                     'type': 'new_request',
                     'content': {
@@ -786,7 +785,7 @@ def customer_create_request(request):
                         'address': service_address.street_area,
                     }
                 }
-            )
+                )
 
             print(f"[ICON] New service request created and broadcasted: ID {service_request.id}")
             if payment_method == 'online':
@@ -1206,12 +1205,12 @@ def accept_request(request, id):
 
         if channel_layer:
             async_to_sync(channel_layer.group_send)(
-            'technicians',
+                'technicians',
             {
                 'type': 'notification_removed',
                 'request_id': service_request.id,
             }
-        )
+            )
 
     return JsonResponse({'status': 'success'})
 
@@ -1295,8 +1294,8 @@ def generate_invoice_pdf(service):
     result = BytesIO()
     pdf_status = pisa.CreatePDF(src=html, dest=result)
 
-    if getattr(pdf_status, 'err', False):
-        print('[ICON] PDF generation failed for service:', service.id, 'errors:', pdf_status.err)
+    if pdf_status.err:  # type: ignore
+        print('[ICON] PDF generation failed for service:', service.id, 'errors:', pdf_status.err)  # type: ignore
         return None
 
     return result.getvalue()
@@ -1404,8 +1403,18 @@ def invoice_pdf(request, service_id):
     return response
 
 def technician_navigation(request, id):
+    if not request.user.is_authenticated:
+        return redirect('technician_login')
 
-    service_request = ServiceRequest.objects.get(id=id)
+    technician = get_object_or_404(Technician_signup, user=request.user)
+    service_request = get_object_or_404(
+        ServiceRequest,
+        id=id,
+        technician_username=technician.username,
+    )
+
+    if not service_request.tracking_active or service_request.status == 'Completed':
+        return HttpResponseForbidden('Navigation is available only during an active journey.')
 
     return render(
 
@@ -1449,8 +1458,8 @@ def customer_google_auth(request):
                 random.randint(1000,9999)
             )
 
-            import secrets
-            password = secrets.token_urlsafe(12)
+            from django.utils.crypto import get_random_string
+            password = get_random_string(10)
 
             user = User.objects.create_user(
 
@@ -1948,9 +1957,10 @@ def technician_wallet_view(request):
     wallet = TechnicianWalletService.get_or_create_wallet(technician)
 
     # Fetch transactions and withdrawals
-    transactions = wallet.transactions.all() # type: ignore
-    withdrawals = technician.withdrawals.all() # type: ignore
-    incentives = technician.incentive_awards.all() # type: ignore
+    from core.models import TechnicianWalletTransaction, WithdrawalRequest, TechnicianIncentiveAward
+    transactions = TechnicianWalletTransaction.objects.filter(wallet=wallet)
+    withdrawals = WithdrawalRequest.objects.filter(technician=technician)
+    incentives = TechnicianIncentiveAward.objects.filter(technician=technician)
 
     context = {
         'technician': technician,
