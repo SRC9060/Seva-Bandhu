@@ -1616,6 +1616,60 @@ def technician_support_chat(request, session_pk):
     }
     return render(request, 'technician/support.html', context)
 
+@csrf_exempt
+@login_required
+def technician_support_api_action(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        action_value = data.get('action_value')
+        action_label = data.get('action_label', '')
+        context_id = data.get('context_id')
+        
+        from core.models import Technician_signup, TechnicianSupportSession, TechnicianSupportMessage
+        from core.services.support_flow import SupportFlowService
+        
+        technician = Technician_signup.objects.get(user=request.user)
+        session = TechnicianSupportSession.objects.get(id=session_id, technician=technician)
+        
+        if session.status in ['SOLVED', 'ESCALATED']:
+            return JsonResponse({'status': 'error', 'message': 'Session is already closed or escalated.'})
+            
+        # 1. Record User's selection
+        TechnicianSupportMessage.objects.create(
+            session=session,
+            sender_type='TECHNICIAN',
+            message=action_label or action_value,
+            selected_option=action_value
+        )
+        
+        # 2. Process action via Flow Service
+        response_data = SupportFlowService.process_action(session, action_value, technician, context_id)
+        
+        # 3. Record System's response
+        TechnicianSupportMessage.objects.create(
+            session=session,
+            sender_type='SYSTEM',
+            message=response_data['message'],
+            options_snapshot=response_data.get('options', [])
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': response_data['message'],
+            'options': response_data.get('options', []),
+            'is_terminal': response_data.get('is_terminal', False),
+            'escalated': response_data.get('escalated', False)
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 def send_verification_email(request):
     if request.method != "POST":

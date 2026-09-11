@@ -24,7 +24,7 @@ def superuser_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('admin_login')
-        if not getattr(request.user, 'is_superuser', False):
+        if not request.user.is_superuser:
             # Optionally clear session if they are a regular user trying to access admin
             return redirect('admin_login')
         return view_func(request, *args, **kwargs)
@@ -541,6 +541,7 @@ def admin_platform_analytics(request):
     from core.services.rating_engine import ServiceRatingEngine
     service_ratings = ServiceRatingEngine.get_all_service_ratings()
 
+
     context = {
         'customers_analyzed': customers_analyzed,
         'interactions': interactions,
@@ -567,6 +568,16 @@ def admin_platform_analytics(request):
         'service_ratings': service_ratings,
     }
     return render(request, 'admin_custom/platform_analytics.html', context)
+
+
+@superuser_required
+def admin_comprehensive_analytics(request):
+    from core.analytics_helper import get_comprehensive_analytics
+    
+    date_filter = request.GET.get('date_filter', 'all_time')
+    comprehensive_data = get_comprehensive_analytics(date_filter)
+
+    return render(request, 'admin_custom/comprehensive_analytics.html', comprehensive_data)
 
 
 
@@ -791,72 +802,19 @@ def admin_withdrawal_action(request, id):
             
     return redirect('admin_withdrawals_list')
 
-# ==========================================
-# ADMIN TECHNICIAN SUPPORT VIEWS
-# ==========================================
-@superuser_required
-def admin_technician_support_list(request):
-    from core.models import TechnicianSupportTicket
-    
-    status_filter = request.GET.get('status', '')
-    tickets = TechnicianSupportTicket.objects.all().order_by('-escalated_at')
-    
-    if status_filter:
-        tickets = tickets.filter(status=status_filter)
-        
-    paginator = Paginator(tickets, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    return render(request, 'admin_custom/support_list.html', {'page_obj': page_obj, 'status_filter': status_filter})
+from .models import TechnicianSupportTicket
+from django.contrib.auth.decorators import login_required
 
-@superuser_required
-def admin_technician_support_chat(request, ticket_pk):
-    from core.models import TechnicianSupportTicket
-    
-    ticket = get_object_or_404(TechnicianSupportTicket, id=ticket_pk)
-    session = ticket.session
-    
-    # Mark admin unread messages as read
-    if ticket.unread_admin_count > 0:
-        ticket.unread_admin_count = 0
-        ticket.save()
-        
-    context = {
-        'ticket': ticket,
-        'session': session,
-        'chat_messages': session.messages.all().order_by('created_at'),
-    }
-    return render(request, 'admin_custom/support_chat.html', context)
+@login_required(login_url='admin_login')
+def admin_tech_support_tickets(request):
+    if not request.user.is_superuser:
+        return redirect('admin_login')
+    tickets = TechnicianSupportTicket.objects.all().order_by('-created_at')
+    return render(request, 'admin_custom/tech_support_tickets.html', {'tickets': tickets})
 
-@superuser_required
-def admin_technician_support_resolve(request, ticket_pk):
-    from core.models import TechnicianSupportTicket
-    from django.utils import timezone
-    
-    if request.method == "POST":
-        ticket = get_object_or_404(TechnicianSupportTicket, id=ticket_pk)
-        session = ticket.session
-        
-        session.status = 'SOLVED'
-        session.completed_at = timezone.now()
-        session.save()
-        
-        ticket.status = 'Closed'
-        ticket.save()
-        
-        # Broadcast the resolution via websockets if possible, but redirecting is fine
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"support_session_{session.id}",
-            {
-                'type': 'status_update',
-                'status': 'SOLVED'
-            }
-        )
-        
-    return redirect('admin_technician_support_chat', ticket_pk=ticket_pk)
-
-# Trigger reload
+@login_required(login_url='admin_login')
+def admin_tech_support_chat(request, ticket_id):
+    if not request.user.is_superuser:
+        return redirect('admin_login')
+    ticket = get_object_or_404(TechnicianSupportTicket, id=ticket_id)
+    return render(request, 'admin_custom/tech_support_chat.html', {'ticket': ticket})

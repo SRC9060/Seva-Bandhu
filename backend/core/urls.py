@@ -29,6 +29,9 @@ urlpatterns = [
     path('technician/request-withdrawal/', views.technician_request_withdrawal, name='technician_request_withdrawal'),
     path('technician/support/', views.technician_support_redirect, name='technician_support_redirect'),
     path('technician/support/<int:session_pk>/', views.technician_support_chat, name='technician_support_chat'),
+    path('technician/support/api/action/', views.technician_support_api_action, name='technician_support_api_action'),
+
+
 
     # Customer
     path('customer/dashboard/', views.customer_dashboard, name='customer_dashboard'),
@@ -63,7 +66,8 @@ urlpatterns = [
     path('admin-login/', admin_views.admin_login_view, name='admin_login'),
     path('super-admin/logout/', admin_views.admin_logout_view, name='admin_logout'),
     path('super-admin/', admin_views.admin_dashboard_view, name='admin_dashboard'),
-    path('super-admin/analytics/', admin_views.admin_platform_analytics, name='admin_platform_analytics'),
+    path('super-admin/analytics/comprehensive/', admin_views.admin_comprehensive_analytics, name='admin_comprehensive_analytics'),
+    path('super-admin/analytics/platform/', admin_views.admin_platform_analytics, name='admin_platform_analytics'),
     
     path('super-admin/offers/', admin_views.admin_offers_list, name='admin_offers_list'),
     path('super-admin/offers/add/', admin_views.admin_offer_add, name='admin_offer_add'),
@@ -96,6 +100,9 @@ urlpatterns = [
     
     path('super-admin/support-tickets/', admin_views.admin_support_tickets_list, name='admin_support_tickets_list'),
     path('super-admin/support-tickets/<int:id>/action/', admin_views.admin_support_ticket_action, name='admin_support_ticket_action'),
+    path('super-admin/technician-support/', admin_views.admin_tech_support_tickets, name='admin_tech_support_tickets'),
+    path('super-admin/technician-support/<int:ticket_id>/', admin_views.admin_tech_support_chat, name='admin_tech_support_chat'),
+
     
     # Wallet & Incentives Admin
     path('super-admin/incentives/', admin_views.admin_incentives_list, name='admin_incentives_list'),
@@ -106,10 +113,6 @@ urlpatterns = [
     
     path('super-admin/withdrawals/', admin_views.admin_withdrawals_list, name='admin_withdrawals_list'),
     path('super-admin/withdrawals/<int:id>/action/', admin_views.admin_withdrawal_action, name='admin_withdrawal_action'),
-    
-    path('super-admin/technician-support/', admin_views.admin_technician_support_list, name='admin_technician_support_list'),
-    path('super-admin/technician-support/<int:ticket_pk>/', admin_views.admin_technician_support_chat, name='admin_technician_support_chat'),
-    path('super-admin/technician-support/<int:ticket_pk>/resolve/', admin_views.admin_technician_support_resolve, name='admin_technician_support_resolve'),
 ]
 
 # 🔥 VERY IMPORTANT — SERVE IMAGES
