@@ -671,6 +671,20 @@ def customer_create_request(request):
                         if data2:
                             customer_latitude = data2[0]['lat']
                             customer_longitude = data2[0]['lon']
+                        else:
+                            # Fallback to just city and pincode
+                            resp3 = requests.get(geourl, params={'q': f"{city} {pincode}", 'format': 'json', 'limit': 1}, headers=headers, timeout=5)
+                            data3 = resp3.json()
+                            if data3:
+                                customer_latitude = data3[0]['lat']
+                                customer_longitude = data3[0]['lon']
+                            else:
+                                # Fallback to just city
+                                resp4 = requests.get(geourl, params={'q': f"{city}", 'format': 'json', 'limit': 1}, headers=headers, timeout=5)
+                                data4 = resp4.json()
+                                if data4:
+                                    customer_latitude = data4[0]['lat']
+                                    customer_longitude = data4[0]['lon']
                 except Exception as e:
                     print("Backend Geocoding failed:", e)
             
@@ -1544,6 +1558,63 @@ def verify_email_code(request):
     request.session.pop('verification_code_hash', None)
     request.session.pop('verification_code_created_at', None)
     return JsonResponse({'status': 'success', 'message': 'Email verified.'})
+
+# ==========================================
+# TECHNICIAN SUPPORT VIEWS
+# ==========================================
+
+@login_required
+def technician_support_redirect(request):
+    """
+    Creates a new guided support session and redirects to it.
+    """
+    from core.models import Technician_signup, TechnicianSupportSession, TechnicianSupportMessage
+    from core.services.support_flow import SUPPORT_TREE
+    
+    technician = Technician_signup.objects.filter(user=request.user).first()
+    if not technician:
+        return redirect('technician_dashboard')
+    
+    session = TechnicianSupportSession.objects.create(technician=technician)
+    
+    # Initialize the first message
+    initial_node = SUPPORT_TREE['start']
+    TechnicianSupportMessage.objects.create(
+        session=session,
+        sender_type='SYSTEM',
+        message=initial_node['message'],
+        options_snapshot=initial_node['options']
+    )
+    
+    return redirect('technician_support_chat', session_pk=session.id)
+
+@login_required
+def technician_support_chat(request, session_pk):
+    """
+    Renders the full-page support chat and history.
+    """
+    from core.models import Technician_signup, TechnicianSupportSession
+    
+    technician = Technician_signup.objects.filter(user=request.user).first()
+    if not technician:
+        return redirect('technician_dashboard')
+        
+    session = get_object_or_404(TechnicianSupportSession, id=session_pk, technician=technician)
+    
+    # Mark technician unread messages as read if escalated
+    if session.status == 'ESCALATED' and hasattr(session, 'ticket'):
+        session.ticket.unread_technician_count = 0
+        session.ticket.save()
+        
+    # Get all previous sessions for history
+    history = TechnicianSupportSession.objects.filter(technician=technician).exclude(id=session.id).order_by('-updated_at')
+    
+    context = {
+        'session': session,
+        'history': history,
+        'messages': session.messages.all().order_by('created_at'),
+    }
+    return render(request, 'technician/support.html', context)
 
 
 def send_verification_email(request):

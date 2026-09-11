@@ -475,3 +475,184 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             'message': event['message'],
             'created_at': event['created_at']
         }))
+
+class TechnicianSupportConsumer(AsyncJsonWebsocketConsumer):
+
+    @database_sync_to_async
+    def get_session(self, session_pk):
+        from core.models import TechnicianSupportSession
+        try:
+            return TechnicianSupportSession.objects.get(id=session_pk)
+        except TechnicianSupportSession.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def verify_ownership(self, session, user):
+        from core.models import Technician_signup
+        if user.is_staff or user.is_superuser:
+            return 'admin'
+        
+        technician = Technician_signup.objects.filter(user=user).first()
+        if technician and session.technician_id == technician.id:
+            return 'technician'
+        
+        return None
+
+    @database_sync_to_async
+    def save_message(self, session, sender_type, user, message_text, options_snapshot=None):
+        from core.models import TechnicianSupportMessage
+        msg = TechnicianSupportMessage.objects.create(
+            session=session,
+            sender_type=sender_type,
+            sender_user=user if sender_type != 'SYSTEM' else None,
+            message=message_text,
+            options_snapshot=options_snapshot
+        )
+        # Update unread count and latest message timestamp if escalated
+        if session.status == 'ESCALATED':
+            if hasattr(session, 'ticket'):
+                ticket = session.ticket
+                if sender_type == 'ADMIN':
+                    ticket.unread_technician_count += 1
+                elif sender_type == 'TECHNICIAN':
+                    ticket.unread_admin_count += 1
+                from django.utils import timezone
+                ticket.last_message_at = timezone.now()
+                ticket.save()
+        return msg
+
+    @database_sync_to_async
+    def process_guided_action(self, session, action_value, user):
+        from core.services.support_flow import SupportFlowService
+        from core.models import Technician_signup
+        technician = Technician_signup.objects.filter(user=user).first()
+        
+        # Check if action contains context
+        context_id = None
+        if '|' in action_value:
+            parts = action_value.split('|')
+            action_value = parts[0]
+            context_id = parts[1]
+            
+        return SupportFlowService.process_action(session, action_value, technician, context_id)
+
+    async def connect(self):
+        self.user = self.scope.get('user')
+        if not self.user or not self.user.is_authenticated:
+            await self.close()
+            return
+
+        self.session_pk = self.scope['url_route']['kwargs'].get('session_pk')
+        if not self.session_pk:
+            await self.close()
+            return
+
+        self.session = await self.get_session(self.session_pk)
+        if not self.session:
+            await self.close()
+            return
+
+        self.role = await self.verify_ownership(self.session, self.user)
+        if not self.role:
+            await self.close()
+            return
+
+        self.support_group_name = f"support_session_{self.session_pk}"
+
+        await self.channel_layer.group_add(
+            self.support_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, code):
+        if hasattr(self, 'support_group_name'):
+            await self.channel_layer.group_discard(
+                self.support_group_name,
+                self.channel_name
+            )
+
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        if not text_data:
+            return
+            
+        data = json.loads(text_data)
+        message_type = data.get('type')
+        
+        # Refresh session status
+        self.session = await self.get_session(self.session_pk)
+        
+        if message_type == 'chat_message' or message_type == 'support_action':
+            message_text = data.get('message', '').strip()
+            action_value = data.get('action_value') # Sent when clicking an option
+            
+            # Identify sender
+            sender_type = 'ADMIN' if self.role == 'admin' else 'TECHNICIAN'
+            
+            # 1. Save user's message
+            msg_text_to_save = message_text
+            if not msg_text_to_save and action_value:
+                msg_text_to_save = data.get('action_label', f"Selected: {action_value}")
+                
+            if msg_text_to_save:
+                user_msg = await self.save_message(
+                    self.session, 
+                    sender_type, 
+                    self.user, 
+                    msg_text_to_save
+                )
+                await self.broadcast_message(user_msg)
+            
+            # 2. Process guided logic if NOT escalated
+            if self.session.status == 'ACTIVE' and self.role == 'technician' and action_value:
+                response = await self.process_guided_action(self.session, action_value, self.user)
+                
+                # Save system response
+                system_msg = await self.save_message(
+                    self.session,
+                    'SYSTEM',
+                    None,
+                    response['message'],
+                    options_snapshot=response.get('options')
+                )
+                await self.broadcast_message(system_msg)
+                
+                if response.get('escalated'):
+                    # Broadcast escalation status
+                    await self.channel_layer.group_send(
+                        self.support_group_name,
+                        {
+                            'type': 'status_update',
+                            'status': 'ESCALATED'
+                        }
+                    )
+            
+    async def broadcast_message(self, msg):
+        await self.channel_layer.group_send(
+            self.support_group_name,
+            {
+                'type': 'support_message_broadcast',
+                'sender_type': msg.sender_type,
+                'sender_name': msg.sender_user.username if msg.sender_user else 'System Assistant',
+                'message': msg.message,
+                'options': msg.options_snapshot,
+                'created_at': msg.created_at.isoformat()
+            }
+        )
+
+    async def support_message_broadcast(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'support_message',
+            'sender_type': event['sender_type'],
+            'sender_name': event['sender_name'],
+            'message': event['message'],
+            'options': event['options'],
+            'created_at': event['created_at']
+        }))
+        
+    async def status_update(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'status_update',
+            'status': event['status']
+        }))

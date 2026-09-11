@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    .support-layout {
+        display: flex;
+        max-width: 1200px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        height: 75vh;
+        font-family: 'Inter', sans-serif;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .support-sidebar {
+        width: 300px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .sidebar-header h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .new-chat-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin-top: 15px;
+        background: #2563eb;
+        color: white;
+        text-align: center;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+
+    .new-chat-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .history-list {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0; /* Ensures flex child can shrink and scroll */
+    }
+
+    .history-item {
+        display: block;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s;
+    }
+
+    .history-item:hover, .history-item.active {
+        background: #e2e8f0;
+    }
+
+    .history-item-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+
+    .history-item-meta {
+        font-size: 12px;
+        color: #64748b;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-header {
+        padding: 20px 24px;
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chat-header h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #fafaf9;
+    }
+
+    .message {
+        max-width: 75%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+        position: relative;
+        word-wrap: break-word;
+    }
+
+    .msg-sent {
+        align-self: flex-end;
+        background: #2563eb;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+
+    .msg-received {
+        align-self: flex-start;
+        background: #e2e8f0;
+        color: #0f172a;
+        border-bottom-left-radius: 4px;
+    }
+
+    .msg-admin {
+        align-self: flex-start;
+        background: #fef08a;
+        color: #854d0e;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #fde047;
+    }
+
+    .msg-time {
+        display: block;
+        font-size: 11px;
+        margin-top: 6px;
+        opacity: 0.8;
+        text-align: right;
+    }
+
+    .msg-received .msg-time {
+        text-align: left;
+        color: #64748b;
+    }
+
+    .chat-input-area {
+        padding: 16px 24px;
+        background: #fff;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: 12px;
+    }
+
+    .chat-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .chat-input:focus {
+        border-color: #2563eb;
+    }
+
+    .btn-send {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        padding: 0 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-active { background: #dcfce7; color: #16a34a; }
+    .status-escalated { background: #fef3c7; color: #d97706; }
+    .status-closed { background: #f1f5f9; color: #64748b; }
+
+    /* Action Buttons (Inline UI) */
+    .action-buttons {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .action-btn {
+        background: #fff;
+        border: 1px solid #2563eb;
+        color: #2563eb;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s;
+    }
+    
+    .action-btn:hover {
+        background: #eff6ff;
+    }
+    
+    .action-btn.escape-btn {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+    .action-btn.escape-btn:hover {
+        background: #fef2f2;
+    }
+    
+    .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .context-card {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        text-align: left;
+        color: #0f172a;
+    }
+    
+    .context-card:hover {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+</style>
+
+<div class="support-layout">
+    <div class="support-sidebar">
+        <div class="sidebar-header">
+            <a href="{% url 'technician_dashboard' %}" style="display:inline-block; margin-bottom:12px; color:#64748b; text-decoration:none; font-size:13px; font-weight: 500;">
+                &larr; Back to Dashboard
+            </a>
+            <h2>Support History</h2>
+            <a href="{% url 'technician_support_redirect' %}" class="new-chat-btn">Start New Support Chat</a>
+        </div>
+        <div class="history-list">
+            {% for hist in history %}
+            <a href="{% url 'technician_support_chat' hist.id %}" class="history-item {% if hist.id == session.id %}active{% endif %}">
+                <div class="history-item-title">
+                    Chat #{{ hist.id }} - {{ hist.created_at|date:"M d" }}
+                    {% if hist.status == 'ESCALATED' and hist.ticket %}
+                    <span style="font-size:11px; float:right; color:#d97706;">(Escalated)</span>
+                    {% endif %}
+                </div>
+                <div class="history-item-meta">
+                    <span>{{ hist.created_at|date:"M d" }}</span>
+                    <span>{{ hist.get_status_display }}</span>
+                </div>
+            </a>
+            {% empty %}
+            <div style="padding: 20px; text-align: center; color: #64748b; font-size: 13px;">
+                No previous support history.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div>
+                <h2>
+                    Support Session #{{ session.id }}
+                    {% if session.status == 'ESCALATED' and session.ticket %}
+                    <span style="font-size:14px; font-weight:normal; color:#64748b; margin-left: 10px;">{{ session.ticket.ticket_id }}</span>
+                    {% endif %}
+                </h2>
+                <p style="margin:4px 0 0; font-size:13px; color:#64748b;" id="chat-subtitle">
+                    {% if session.status == 'ESCALATED' %}
+                    Live Chat with Admin
+                    {% else %}
+                    Guided Support Assistant
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <span class="status-badge" id="status-indicator">{{ session.get_status_display }}</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            {% for msg in messages %}
+            <div class="message {% if msg.sender_type == 'TECHNICIAN' %}msg-sent{% elif msg.sender_type == 'ADMIN' %}msg-admin{% else %}msg-received{% endif %}">
+                {% if msg.sender_type == 'ADMIN' %}<strong>Admin:</strong><br>{% endif %}
+                {{ msg.message }}
+                <span class="msg-time">{{ msg.created_at|date:"M d, h:i A" }}</span>
+                
+                {% if msg.options_snapshot and forloop.last and session.status == 'ACTIVE' %}
+                <div class="action-buttons" id="active-actions">
+                    {% for opt in msg.options_snapshot %}
+                        {% if opt.is_context %}
+                            <button class="context-card" onclick="sendAction('{{ opt.value }}|{{ opt.context_id }}', '{{ opt.label|escapejs }}')">
+                                {{ opt.label }}
+                            </button>
+                        {% else %}
+                            <button class="action-btn {% if opt.is_escape %}escape-btn{% endif %}" onclick="sendAction('{{ opt.value }}', '{{ opt.label|escapejs }}')">
+                                {{ opt.label }}
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input-area" id="input-area" style="display: {% if session.status == 'ESCALATED' %}flex{% else %}none{% endif %};">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." autocomplete="off">
+            <button id="send-btn" class="btn-send">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const sessionPk = "{{ session.id }}";
+    let isEscalated = "{{ session.status }}" === "ESCALATED";
+
+    const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const chatSocket = new WebSocket(wsProtocol + window.location.host + `/ws/support/technician/${sessionPk}/`);
+
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const inputArea = document.getElementById('input-area');
+    const statusIndicator = document.getElementById('status-indicator');
+    const chatSubtitle = document.getElementById('chat-subtitle');
+
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    scrollToBottom();
+
+    function formatTime(isoString) {
+        const d = new Date(isoString);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    function disableOldActions() {
+        const actionsBox = document.getElementById('active-actions');
+        if (actionsBox) {
+            actionsBox.removeAttribute('id');
+            const btns = actionsBox.querySelectorAll('button');
+            btns.forEach(b => {
+                b.disabled = true;
+                b.style.opacity = '0.6';
+                b.style.cursor = 'not-allowed';
+            });
+        }
+    }
+
+    function sendAction(actionValue, actionLabel) {
+        disableOldActions();
+        chatSocket.send(JSON.stringify({
+            'type': 'support_action',
+            'action_value': actionValue,
+            'action_label': actionLabel
+        }));
+    }
+
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'status_update') {
+            if (data.status === 'ESCALATED') {
+                isEscalated = true;
+                statusIndicator.textContent = 'ESCALATED';
+                statusIndicator.className = 'status-badge status-escalated';
+                chatSubtitle.textContent = 'Live Chat with Admin';
+                inputArea.style.display = 'flex';
+                disableOldActions();
+            } else if (data.status === 'SOLVED') {
+                statusIndicator.textContent = 'SOLVED';
+            }
+            return;
+        }
+
+        if (data.type === 'support_message') {
+            const msgDiv = document.createElement('div');
+            
+            if (data.sender_type === 'TECHNICIAN') {
+                msgDiv.className = 'message msg-sent';
+            } else if (data.sender_type === 'ADMIN') {
+                msgDiv.className = 'message msg-admin';
+                msgDiv.innerHTML = '<strong>Admin:</strong><br>';
+            } else {
+                msgDiv.className = 'message msg-received';
+            }
+            
+            msgDiv.innerHTML += data.message;
+            msgDiv.innerHTML += `<span class="msg-time">${formatTime(data.created_at)}</span>`;
+            
+            // Add options if it's a SYSTEM message and not escalated
+            if (data.options && data.options.length > 0 && !isEscalated) {
+                disableOldActions();
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'action-buttons';
+                actionsDiv.id = 'active-actions';
+                
+                data.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    
+                    if (opt.is_context) {
+                        btn.className = 'context-card';
+                        btn.onclick = () => sendAction(`${opt.value}|${opt.context_id}`, opt.label);
+                    } else {
+                        btn.className = opt.is_escape ? 'action-btn escape-btn' : 'action-btn';
+                        btn.onclick = () => sendAction(opt.value, opt.label);
+                    }
+                    
+                    btn.textContent = opt.label;
+                    actionsDiv.appendChild(btn);
+                });
+                msgDiv.appendChild(actionsDiv);
+            }
+            
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        }
+    };
+
+    chatSocket.onclose = function (e) {
+        console.error('Support socket closed unexpectedly');
+    };
+
+    sendBtn.onclick = function (e) {
+        const message = chatInput.value;
+        if (message.trim() !== '') {
+            chatSocket.send(JSON.stringify({
+                'type': 'chat_message',
+                'message': message
+            }));
+            chatInput.value = '';
+        }
+    };
+
+    chatInput.onkeyup = function (e) {
+        if (e.keyCode === 13) {  // Enter key
+            sendBtn.click();
+        }
+    };
+</script>
+{% endblock %}

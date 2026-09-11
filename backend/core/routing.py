@@ -17,4 +17,9 @@ websocket_urlpatterns = [
         r'^ws/chat/(?P<request_id>\d+)/$',
         consumers.ChatConsumer.as_asgi()
     ),
+
+    re_path( # type: ignore
+        r'^ws/support/technician/(?P<session_pk>\d+)/$',
+        consumers.TechnicianSupportConsumer.as_asgi()
+    ),
 ]

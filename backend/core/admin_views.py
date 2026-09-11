@@ -790,3 +790,73 @@ def admin_withdrawal_action(request, id):
             messages.error(request, str(e))
             
     return redirect('admin_withdrawals_list')
+
+# ==========================================
+# ADMIN TECHNICIAN SUPPORT VIEWS
+# ==========================================
+@superuser_required
+def admin_technician_support_list(request):
+    from core.models import TechnicianSupportTicket
+    
+    status_filter = request.GET.get('status', '')
+    tickets = TechnicianSupportTicket.objects.all().order_by('-escalated_at')
+    
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+        
+    paginator = Paginator(tickets, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'admin_custom/support_list.html', {'page_obj': page_obj, 'status_filter': status_filter})
+
+@superuser_required
+def admin_technician_support_chat(request, ticket_pk):
+    from core.models import TechnicianSupportTicket
+    
+    ticket = get_object_or_404(TechnicianSupportTicket, id=ticket_pk)
+    session = ticket.session
+    
+    # Mark admin unread messages as read
+    if ticket.unread_admin_count > 0:
+        ticket.unread_admin_count = 0
+        ticket.save()
+        
+    context = {
+        'ticket': ticket,
+        'session': session,
+        'chat_messages': session.messages.all().order_by('created_at'),
+    }
+    return render(request, 'admin_custom/support_chat.html', context)
+
+@superuser_required
+def admin_technician_support_resolve(request, ticket_pk):
+    from core.models import TechnicianSupportTicket
+    from django.utils import timezone
+    
+    if request.method == "POST":
+        ticket = get_object_or_404(TechnicianSupportTicket, id=ticket_pk)
+        session = ticket.session
+        
+        session.status = 'SOLVED'
+        session.completed_at = timezone.now()
+        session.save()
+        
+        ticket.status = 'Closed'
+        ticket.save()
+        
+        # Broadcast the resolution via websockets if possible, but redirecting is fine
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"support_session_{session.id}",
+            {
+                'type': 'status_update',
+                'status': 'SOLVED'
+            }
+        )
+        
+    return redirect('admin_technician_support_chat', ticket_pk=ticket_pk)
+
+# Trigger reload

@@ -728,6 +728,14 @@
                 </svg>
                 Wallet (₹{{ wallet.available_balance|default:"0.00" }})
             </a>
+            
+            <a href="{% url 'technician_support_redirect' %}" class="btn-action"
+                style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Support / Help
+            </a>
 
             {% if not technician.profile_completed %}
             <a href="{% url 'technician_complete_profile' %}" class="btn-action btn-action-outline">
@@ -819,8 +827,7 @@
             <div style="padding: 16px 0;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                     <span style="color: #64748b; font-weight: 600;">Available Balance:</span>
-                    <span style="font-weight: 800; color: #0f172a;">₹{{ wallet.available_balance|default:"0.00"
-                        }}</span>
+                    <span style="font-weight: 800; color: #0f172a;">₹{{ wallet.available_balance|default:"0.00" }}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                     <span style="color: #64748b; font-weight: 600;">Today's Earnings:</span>
@@ -828,8 +835,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: #64748b; font-weight: 600;">Total Incentives:</span>
-                    <span style="font-weight: 800; color: #15803d;">₹{{ wallet.total_incentive_earnings|default:"0.00"
-                        }}</span>
+                    <span style="font-weight: 800; color: #15803d;">₹{{ wallet.total_incentive_earnings|default:"0.00" }}</span>
                 </div>
             </div>
             <div style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px;">

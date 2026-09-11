@@ -599,3 +599,92 @@ class WithdrawalRequest(models.Model):
 
     def __str__(self):
         return f"Withdrawal of {self.amount} by {self.technician.username} ({self.status})"
+
+# ==========================================
+# TECHNICIAN GUIDED SUPPORT & ESCALATION
+# ==========================================
+
+class TechnicianSupportSession(models.Model):
+    STATUS_CHOICES = (
+        ('ACTIVE', 'Active'),
+        ('SOLVED', 'Solved'),
+        ('ESCALATED', 'Escalated'),
+        ('ABANDONED', 'Abandoned'),
+    )
+    technician = models.ForeignKey(Technician_signup, on_delete=models.CASCADE, related_name='support_sessions')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    flow_state = models.JSONField(default=dict, blank=True)
+    
+    # Context references
+    related_service_request = models.ForeignKey('ServiceRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='support_sessions')
+    related_wallet_transaction = models.ForeignKey('TechnicianWalletTransaction', on_delete=models.SET_NULL, null=True, blank=True, related_name='support_sessions')
+    related_withdrawal = models.ForeignKey('WithdrawalRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='support_sessions')
+    related_incentive = models.ForeignKey('Incentive', on_delete=models.SET_NULL, null=True, blank=True, related_name='support_sessions')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'TechnicianSupportSession'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Support Session for {self.technician.username} ({self.status})"
+
+
+class TechnicianSupportMessage(models.Model):
+    SENDER_CHOICES = (
+        ('SYSTEM', 'System'),
+        ('TECHNICIAN', 'Technician'),
+        ('ADMIN', 'Admin'),
+    )
+    session = models.ForeignKey(TechnicianSupportSession, on_delete=models.CASCADE, related_name='messages')
+    sender_type = models.CharField(max_length=20, choices=SENDER_CHOICES)
+    sender_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='technician_support_messages')
+    message = models.TextField()
+    options_snapshot = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'TechnicianSupportMessage'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Msg by {self.sender_type} at {self.created_at}"
+
+
+class TechnicianSupportTicket(models.Model):
+    PRIORITY_CHOICES = (
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+        ('URGENT', 'Urgent'),
+    )
+    STATUS_CHOICES = (
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+        ('CLOSED', 'Closed'),
+    )
+    session = models.OneToOneField(TechnicianSupportSession, on_delete=models.CASCADE, related_name='ticket')
+    ticket_id = models.CharField(max_length=20, unique=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='MEDIUM')
+    category = models.CharField(max_length=50)
+    issue = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    
+    # Unread/latest message handling
+    unread_admin_count = models.IntegerField(default=0)
+    unread_technician_count = models.IntegerField(default=0)
+    last_message_at = models.DateTimeField(auto_now_add=True)
+    
+    escalated_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'TechnicianSupportTicket'
+        ordering = ['-escalated_at']
+
+    def __str__(self):
+        return f"{self.ticket_id} - {self.category} ({self.status})"

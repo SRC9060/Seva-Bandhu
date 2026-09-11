@@ -27,6 +27,8 @@ urlpatterns = [
     path('technician/navigation/<int:id>/',views.technician_navigation,name='technician_navigation'),
     path('technician/wallet/', views.technician_wallet_view, name='technician_wallet'),
     path('technician/request-withdrawal/', views.technician_request_withdrawal, name='technician_request_withdrawal'),
+    path('technician/support/', views.technician_support_redirect, name='technician_support_redirect'),
+    path('technician/support/<int:session_pk>/', views.technician_support_chat, name='technician_support_chat'),
 
     # Customer
     path('customer/dashboard/', views.customer_dashboard, name='customer_dashboard'),
@@ -104,6 +106,10 @@ urlpatterns = [
     
     path('super-admin/withdrawals/', admin_views.admin_withdrawals_list, name='admin_withdrawals_list'),
     path('super-admin/withdrawals/<int:id>/action/', admin_views.admin_withdrawal_action, name='admin_withdrawal_action'),
+    
+    path('super-admin/technician-support/', admin_views.admin_technician_support_list, name='admin_technician_support_list'),
+    path('super-admin/technician-support/<int:ticket_pk>/', admin_views.admin_technician_support_chat, name='admin_technician_support_chat'),
+    path('super-admin/technician-support/<int:ticket_pk>/resolve/', admin_views.admin_technician_support_resolve, name='admin_technician_support_resolve'),
 ]
 
 # 🔥 VERY IMPORTANT — SERVE IMAGES
