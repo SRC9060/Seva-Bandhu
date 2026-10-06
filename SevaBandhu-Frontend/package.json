@@ -1,11 +1,23 @@
 {
-  "name": "sevabandhu-frontend",
-  "version": "0.1.0",
+  "name": "seva-bandhu-frontend",
   "private": true,
-  "description": "Reserved frontend workspace for a future standalone Seva Bandhu UI.",
-  "scripts": {
-    "start": "echo \"No standalone frontend has been generated yet.\""
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.2"
+  }
 }
