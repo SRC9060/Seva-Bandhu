@@ -3,6 +3,7 @@ name: Frontend build
 on:
   push:
     branches:
+      - main
       - feature/vercel-frontend-foundation
     paths:
       - "SevaBandhu-Frontend/**"
