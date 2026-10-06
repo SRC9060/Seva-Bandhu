@@ -24,6 +24,9 @@ import uuid
 import hashlib
 import secrets
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     TechnicianNotification,
@@ -1697,6 +1700,14 @@ def send_verification_email(request):
     try:
         _send_customer_verification_email(email, code)
     except Exception:
+        # Keep provider details in server logs only; never expose credentials or
+        # email-provider internals to the public signup endpoint.
+        logger.exception(
+            "Customer verification email delivery failed (backend=%s, brevo_key_configured=%s, brevo_sender_configured=%s).",
+            settings.EMAIL_BACKEND,
+            bool(getattr(settings, "BREVO_API_KEY", "")),
+            bool(getattr(settings, "BREVO_SENDER_EMAIL", "")),
+        )
         return JsonResponse({
             'status': 'failed',
             'message': 'We could not send the verification email. Check the email settings and try again.'
