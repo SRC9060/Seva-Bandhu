@@ -1,0 +1,30 @@
+name: Frontend build
+
+on:
+  push:
+    branches:
+      - feature/vercel-frontend-foundation
+    paths:
+      - "SevaBandhu-Frontend/**"
+      - ".github/workflows/frontend-build.yml"
+  pull_request:
+    paths:
+      - "SevaBandhu-Frontend/**"
+      - ".github/workflows/frontend-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        working-directory: SevaBandhu-Frontend
+        run: npm install
+      - name: Build Vercel frontend
+        working-directory: SevaBandhu-Frontend
+        run: npm run build
