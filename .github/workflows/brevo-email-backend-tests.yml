@@ -1,0 +1,39 @@
+name: Brevo email backend tests
+
+on:
+  push:
+    branches:
+      - feature/brevo-transactional-email
+    paths:
+      - "backend/**"
+      - ".env.example"
+      - ".github/workflows/brevo-email-backend-tests.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".env.example"
+      - ".github/workflows/brevo-email-backend-tests.yml"
+
+jobs:
+  django-email-tests:
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SECRET_KEY: ci-only-not-a-real-secret
+      DJANGO_DEBUG: "True"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run Django system checks
+        working-directory: backend
+        run: python manage.py check
+      - name: Test Brevo backend and customer OTP flows
+        working-directory: backend
+        run: python manage.py test core.test_email_backends core.tests --verbosity=2
