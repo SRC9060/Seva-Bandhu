@@ -95,6 +95,25 @@ Important variables include:
 - `FIREBASE_MESSAGING_SENDER_ID`
 - `FIREBASE_APP_ID`
 
+## Transactional Email (Brevo)
+
+Customer email verification codes and invoice emails use Django's standard `send_mail`/`EmailMessage` interface. The optional Brevo backend sends those existing messages through Brevo's HTTPS transactional-email API, so Render Free does not need outbound SMTP access.
+
+1. In Brevo, create an API key and verify the sender email address (or sending domain) you will use.
+2. In Render → the Seva Bandhu web service → Environment, add:
+   - `EMAIL_BACKEND=core.email_backends.BrevoEmailBackend`
+   - `BREVO_API_KEY` = your private Brevo API key
+   - `BREVO_SENDER_EMAIL` = the sender address verified in Brevo
+   - `BREVO_SENDER_NAME=Seva Bandhu`
+   - `BREVO_API_TIMEOUT=15`
+   - `DEFAULT_FROM_EMAIL` = the same verified sender address
+3. Save and wait for Render to redeploy.
+4. Test a real OTP to an inbox you control, then verify the code. Also test invoice email if the payment flow can safely be exercised.
+
+Keep the API key only in Render's private environment settings or a local, uncommitted `.env`. Never use a `VITE_*` variable for a secret. A successful Brevo API response means the message was accepted by Brevo, not necessarily delivered to the recipient's inbox; inspect Brevo's transactional logs if delivery is missing.
+
+When the Brevo API key is absent, the settings retain the normal local development behavior (console email in debug mode if SMTP is not configured). Legacy SMTP environment variables remain available if deliberately using an SMTP backend.
+
 ## Security Notes
 
 - Do not commit `.env`, SQLite database files, virtual environments, generated media, or dependency folders.
