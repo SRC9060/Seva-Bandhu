@@ -17,7 +17,6 @@ Incremental==24.11.0
 msgpack==1.1.2
 packaging==26.2
 pillow==12.2.0
-psycopg2==2.9.12
 psycopg2-binary==2.9.12
 py-ubjson==0.16.1
 pyasn1==0.6.3
@@ -40,3 +39,5 @@ groq==1.6.0
 joblib==1.5.2
 numpy==2.4.2
 scikit-learn==1.8.0
+channels-redis>=4.2,<5.0
+whitenoise>=6.9,<7.0
