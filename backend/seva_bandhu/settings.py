@@ -36,6 +36,8 @@ if RENDER_EXTERNAL_HOSTNAME:
         CSRF_TRUSTED_ORIGINS.append(render_origin)
 
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+if not PUBLIC_BASE_URL and RENDER_EXTERNAL_HOSTNAME:
+    PUBLIC_BASE_URL = f"https://{RENDER_EXTERNAL_HOSTNAME}"
 
 INSTALLED_APPS = [
     "daphne",
