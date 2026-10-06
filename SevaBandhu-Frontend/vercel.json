@@ -2,12 +2,5 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "redirects": [
-    {
-      "source": "/:path*",
-      "destination": "https://seva-bandhu-src9060.onrender.com/:path*",
-      "permanent": false
-    }
-  ]
+  "installCommand": "npm install"
 }
