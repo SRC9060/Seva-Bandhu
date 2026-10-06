@@ -51,7 +51,7 @@ class BrevoEmailBackendTests(SimpleTestCase):
         self.assertEqual(request.get_header("Api-key"), "test-brevo-api-key")
         self.assertEqual(payload["sender"]["email"], "verified@example.com")
         self.assertEqual(payload["sender"]["name"], "Seva Bandhu")
-        self.assertEqual(payload["to"], [{"email": "customer@example.com", "name": ""}])
+        self.assertEqual(payload["to"], [{"email": "customer@example.com", "name": "customer"}])
         self.assertEqual(payload["textContent"], "Your code is 123456.")
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 7)
 
