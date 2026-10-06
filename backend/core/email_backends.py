@@ -66,7 +66,11 @@ class BrevoEmailBackend(BaseEmailBackend):
             raise ImproperlyConfigured(
                 "Configure a valid sender/recipient email address for Brevo."
             )
-        return {"email": address, "name": name.strip() or default_name}
+        # Brevo rejects recipients whose name is missing/empty ("name is missing in to").
+        # Django commonly supplies plain addresses with no display name; derive a
+        # deterministic non-empty fallback from the address's local part.
+        display_name = name.strip() or default_name.strip() or address.split("@", 1)[0].strip() or "Recipient"
+        return {"email": address, "name": display_name}
 
     @staticmethod
     def _recipient_list(addresses):
