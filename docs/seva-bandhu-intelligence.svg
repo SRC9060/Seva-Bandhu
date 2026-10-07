@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="430" viewBox="0 0 1400 430" role="img" aria-labelledby="title desc">
+<title id="title">Seva Bandhu intelligence loop</title><desc id="desc">A loop showing booking activity generating data, ML recommendations and smart offers, followed by engagement and new booking data.</desc>
+<defs>
+ <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#2b6ed2"/></marker>
+ <filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#11315a" flood-opacity=".12"/></filter>
+</defs>
+<rect width="1400" height="430" rx="28" fill="#fbfdff"/>
+<text x="55" y="55" font-family="Inter,Arial,sans-serif" font-size="30" font-weight="800" fill="#10223e">The interesting part: the platform learns from its own usage</text>
+<g font-family="Inter,Arial,sans-serif" filter="url(#s)">
+ <rect x="60" y="145" width="235" height="150" rx="22" fill="#fff" stroke="#d9e5f6"/>
+ <text x="95" y="190" font-size="20" font-weight="800" fill="#1d5fc7">1. Activity</text>
+ <text x="95" y="222" font-size="14" fill="#61728d">Bookings</text>
+ <text x="95" y="247" font-size="14" fill="#61728d">Service views</text>
+ <text x="95" y="272" font-size="14" fill="#61728d">Clicks + completions</text>
+
+ <rect x="360" y="115" width="255" height="210" rx="22" fill="#0f2f66"/>
+ <text x="397" y="160" font-size="20" font-weight="800" fill="#fff">2. Intelligence</text>
+ <text x="397" y="194" font-size="14" fill="#d5e4fb">KNN collaborative filtering</text>
+ <text x="397" y="220" font-size="14" fill="#d5e4fb">Recency + status weighting</text>
+ <text x="397" y="246" font-size="14" fill="#d5e4fb">Bayesian service rating</text>
+ <text x="397" y="272" font-size="14" fill="#d5e4fb">Offer eligibility engine</text>
+ <text x="397" y="298" font-size="14" fill="#9bc0ff">Customer AI context</text>
+
+ <rect x="680" y="145" width="235" height="150" rx="22" fill="#fff" stroke="#d9e5f6"/>
+ <text x="715" y="190" font-size="20" font-weight="800" fill="#6f45c8">3. Personalization</text>
+ <text x="715" y="222" font-size="14" fill="#61728d">Recommended services</text>
+ <text x="715" y="247" font-size="14" fill="#61728d">Smart offers</text>
+ <text x="715" y="272" font-size="14" fill="#61728d">Context-aware assistance</text>
+
+ <rect x="980" y="145" width="235" height="150" rx="22" fill="#fff" stroke="#d9e5f6"/>
+ <text x="1015" y="190" font-size="20" font-weight="800" fill="#1d8c69">4. New signal</text>
+ <text x="1015" y="222" font-size="14" fill="#61728d">Customer books again</text>
+ <text x="1015" y="247" font-size="14" fill="#61728d">Clicks / views / completion</text>
+ <text x="1015" y="272" font-size="14" fill="#61728d">Feedback enters the system</text>
+</g>
+<g stroke="#2b6ed2" stroke-width="3" fill="none" marker-end="url(#a)">
+ <path d="M295 220 L360 220"/>
+ <path d="M615 220 L680 220"/>
+ <path d="M915 220 L980 220"/>
+ <path d="M1095 295 C1095 365 520 380 177 295"/>
+</g>
+<text x="555" y="390" font-family="Inter,Arial,sans-serif" font-size="14" fill="#6d7d95">A simple booking app ends at “Booked”. Seva Bandhu uses the booking to improve what happens next.</text>
+</svg>
