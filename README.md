@@ -1,599 +1,427 @@
 # Seva Bandhu
 
-Seva Bandhu is a Django-based service management platform that connects customers with technicians for local home-service requests.
+<p align="center">
+  <img src="docs/seva-bandhu-hero.svg" alt="Seva Bandhu platform overview" width="100%">
+</p>
 
-The project has evolved beyond a basic booking system and now includes intelligent service recommendations, smart offers, technician earnings and incentives, real-time tracking and chat, customer support, comprehensive admin analytics, and a local admin data assistant.
+<p align="center">
+  <b>A home-service platform that connects customers, technicians and administrators — with real-time systems, ML personalization, AI assistance and operational analytics built into the same product.</b>
+</p>
 
-## Overview
+<p align="center">
+  <a href="https://seva-bandhu-src9060.onrender.com">Live Demo</a>
+  ·
+  <a href="https://github.com/SRC9060/Seva-Bandhu">Source Code</a>
+</p>
 
-Seva Bandhu provides three main experiences:
+---
 
-- Customer: discover services, create service requests, choose service dates and time slots, use offers/referrals, pay for services, track technicians, chat during active requests, manage a wallet, submit ratings/complaints, and use an AI customer assistant.
-- Technician: manage a profile, receive service requests, accept and complete jobs, navigate to customers with live GPS tracking, use real-time chat, view wallet earnings, request withdrawals, and work toward incentive milestones.
-- Super Admin: manage customers, technicians, services, requests, offers, referrals, support, incentives, withdrawals, notifications, ratings, and platform analytics, with a natural-language admin data assistant for read-only information retrieval.
+## Why Seva Bandhu is interesting
 
-## Key Features
+This started as a service-booking idea. It grew into a much broader engineering system.
 
-### Customer features
+A customer can book a service, receive an OTP, get personalized recommendations, see smart offers, pay, receive an invoice, track the technician live, chat during the journey, and leave feedback.
 
-- Customer registration and login.
-- Email verification with a 6-digit OTP before account creation.
-- Phone verification using Firebase.
-- Google-based customer sign-in flow.
-- Service catalog with service image, price, enabled/disabled status, and dynamically calculated service ratings.
-- Service request creation with service selection, problem description, priority, preferred service date, preferred time slot, contact number, and service address.
-- Booking/request status tracking.
-- Online/offline payment flow as supported by the current application.
-- Customer wallet with transaction history and self top-up flow.
-- Invoice PDF generation and transactional invoice emails.
-- Technician live-location tracking for active requests.
-- Real-time customer-technician chat.
-- Customer ratings for completed technician services.
-- Customer complaints/support tickets linked to bookings and technicians.
-- Offers and customer-specific offer assignments.
-- Referral codes and referral reward tracking.
-- Personalized service recommendations powered by the ML recommendation engine.
-- Smart-offer intent tracking based on recent service interest.
-- Customer AI assistant using customer-specific platform context.
+At the other end, the technician gets job dispatch, navigation, live GPS, chat, earnings, withdrawals and incentive missions.
 
-### Technician features
+And the admin does not just get a CRUD dashboard — the platform exposes financial analytics, ML analytics, offer performance, wallet activity, support, ratings, and a read-only natural-language data assistant for questions like:
 
-- Technician registration and login.
-- Profile completion with service category, experience, and working locations.
-- Availability management.
-- Technician dashboard and job/request management.
-- Request acceptance and status progression.
-- Start Journey / active tracking flow.
-- Live GPS location publishing through WebSockets.
-- Route navigation with Leaflet and Leaflet Routing Machine.
-- OSRM-based road routing, distance, ETA, and turn-by-turn route information.
-- Browser voice guidance using the Web Speech API when supported.
-- Arrival detection and route recalculation support.
-- Real-time customer-technician chat.
-- Technician notifications.
-- Technician wallet with available balance, total job earnings, total incentive earnings, total withdrawn, and transaction history.
-- Withdrawal request workflow with pending, approved, completed, and rejected handling.
-- Incentive missions and progress tracking.
-- Incentive awards for supported milestones such as daily completed jobs and five-star rating milestones.
-- Full-page technician support assistant with predefined troubleshooting flows.
-- Escalation from guided support to a human admin support conversation.
+> Which technician completed the most jobs this month?  
+> How much did Rahul earn?  
+> Which service generated the most sales?
 
-### Service rating engine
+The goal was simple: make the booking flow feel like a real product, not just a database with forms.
 
-Service ratings are calculated from completed service bookings and validated complaints rather than being hardcoded.
+---
 
-The current rating engine uses Bayesian smoothing with:
+## The 3 things I am most proud of
 
-- prior confidence: 10 virtual completed bookings
-- prior complaint rate: 2%
-- complaint-to-rating penalty multiplier: 10
-- final rating clamped to the 1.0 to 5.0 range
-- services with no completed bookings show a no-rating state
+### 01 — The platform learns from usage
 
-Validated complaints are based on resolved complaint tickets and exclude tickets explicitly marked as rejected or declined.
+Seva Bandhu has a collaborative-filtering recommendation engine.
 
-### ML recommendation engine
+It builds a customer × service interaction matrix, applies recency and booking-status weighting, finds similar customers with cosine-distance KNN, and blends:
 
-The project contains a collaborative-filtering recommendation engine implemented with scikit-learn.
+- 70% from the customer's own history
+- 30% from similar customers
 
-Current design:
+Recommendations are also logged so clicks and bookings can be measured later.
 
-- customer-service interaction matrix
-- customer history and similar-customer behavior
-- cosine-distance nearest-neighbor model
-- up to 5 nearest neighbors
-- personalized recommendation ranking
-- user's own history receives 70% of the final score
-- similar-customer behavior contributes 30%
-- interaction values include recency and booking-status weighting during model training
-- cold-start/popularity fallback when a personalized model is not available
-- up to 3 recommended services are returned by default
-- recommendation impressions, clicks, and bookings are logged through RecommendationLog
+<p align="center">
+  <img src="docs/seva-bandhu-intelligence.svg" alt="Seva Bandhu intelligence loop" width="100%">
+</p>
 
-Relevant files:
+---
 
-- backend/core/ml/recommender.py
-- backend/core/ml/train_recommender.py
-- backend/core/ml/model/
+### 02 — Real-time tracking is part of the product
 
-### Smart offers and promotions
+The technician journey is not a fake map animation.
 
-Offers are managed through an eligibility and assignment engine.
+Django Channels handles the real-time connection for tracking and chat. The technician navigation page uses:
 
-Current capabilities include:
-
-- global and segmented offers
-- new-customer and frequent-customer targeting
-- customer offer assignments
-- offer viewing/redemption tracking
-- service-specific applicability
-- flat and percentage discounts
-- maximum discount limits
-- minimum order value
-- global usage limits
-- per-customer usage limits
-- offer expiry and activation windows
-- recent service-intent tracking
-- cooldown protection for repeated popups
-- ML recommendation scores can influence which eligible smart offer is prioritized
-- recommendation/offer interaction is reflected in platform analytics
-
-Relevant files:
-
-- backend/core/services/offer_engine.py
-- backend/core/models.py
-
-### Referrals
-
-Customers can use referral codes and referral records are stored in the platform.
-
-The current implementation tracks:
-
-- referrer
-- referee
-- reward amount
-- referral creation time
-- referral-related wallet credit
-- admin referral reporting
-
-### Technician wallet and incentives
-
-Technician earnings are maintained separately from customer payments.
-
-The wallet service supports:
-
-- job-earning credits
-- incentive credits
-- withdrawal reservations
-- withdrawal approval/completion
-- rejected-withdrawal balance reversal
-- transaction records
-- concurrency-safe wallet updates using database transactions and row locking
-
-Relevant files:
-
-- backend/core/services/technician_wallet.py
-- backend/core/services/incentive_engine.py
-
-### Real-time communication and tracking
-
-Django Channels powers the real-time parts of the platform.
-
-Current WebSocket routes include:
-
-- /ws/requests/ — technician request notifications
-- /ws/tracking/<request_id>/ — live technician tracking
-- /ws/chat/<request_id>/ — customer-technician chat
-- /ws/support/technician/<session_id>/ — technician/admin support communication
-
-Tracking includes authorization of the logged-in participant, coordinate validation, persisted tracking snapshots, route metrics, and technician arrival state.
-
-The technician navigation interface currently uses:
-
+- browser geolocation
 - Leaflet
 - Leaflet Routing Machine
-- OSRM
-- browser geolocation
-- browser speechSynthesis voice guidance
+- OSRM road routing
+- live distance / ETA
+- route recalculation
+- arrival-state handling
+- browser speech synthesis for voice guidance
 
-### Customer AI assistant
+The backend also validates the authenticated participant and persists tracking snapshots.
 
-The customer chatbot is a context-aware AI assistant for the currently authenticated customer.
+---
 
-The current backend:
+### 03 — The admin side has its own intelligence layer
 
-- retrieves customer-specific account and service-request context
-- includes active and recent completed requests
-- includes enabled services and prices
-- uses Google Gemini as the primary AI provider
-- uses Groq as a fallback provider
-- does not expose unrelated customer records to the model context
-- instructs the assistant not to invent booking, price, technician, or status information that is not in the supplied context
+Two very different assistants exist in the project.
 
-Relevant files:
+Customer AI Assistant
 
-- backend/core/ai/chatbot.py
-- backend/core/ai/context.py
-- backend/core/ai/prompts.py
-- SevaBandhu-Frontend/templates/customer/chatbot.html
+Gemini is the primary provider and Groq is the fallback. The assistant receives context belonging to the currently logged-in customer and is instructed not to invent booking, technician, price or status data.
 
-The current customer AI implementation does not directly call the OpenAI API. The Groq model name can contain an openai/ prefix because that is the model identifier used by the Groq service.
+Admin Data Assistant
 
-### Technician support assistant
+This one deliberately does not use an LLM.
 
-Technician support is intentionally different from the customer AI chatbot.
+It is a deterministic, read-only, database-backed assistant for the admin panel. The idea is useful for operations: ask the database questions in natural language instead of digging through tables manually.
 
-It currently uses a deterministic predefined decision tree rather than an external LLM.
+---
 
-Supported areas include:
+## What makes the system unusual
+
+### A rating engine without fake stars
+
+Service ratings are calculated from completed bookings plus validated complaints, not hardcoded values.
+
+The current implementation applies Bayesian smoothing so a service with very little history does not get an unstable rating from one early complaint.
+
+### Smart offers react to intent
+
+The offer system tracks recent service interest and can trigger a smart offer after repeated service views within the configured window.
+
+It also checks eligibility, minimum order value, usage limits, per-customer limits, service applicability and cooldown rules.
+
+Most importantly, ML recommendation scores can influence which eligible offer is surfaced first.
+
+### Technician support is a guided decision tree
+
+The technician support assistant is intentionally deterministic.
+
+It walks through predefined categories such as:
 
 - payment / earnings
 - service / booking
 - wallet / withdrawal
-- incentives / rewards
-- app / technical problems
+- incentives
+- technical issues
 - account / profile
-- other issues
-- guided troubleshooting
-- solved/still-problem responses
-- explicit admin escalation
 
-After escalation, the platform creates a technician support ticket/conversation that can be handled by an admin.
+If guided troubleshooting cannot solve the issue, it can escalate to human admin support while keeping the support session context.
 
-Relevant file:
+### Wallet operations are transactional
 
-- backend/core/services/support_flow.py
+Technician earnings, incentives, withdrawals and reversals are handled through database transactions and row locking so concurrent wallet updates do not casually corrupt balances.
 
-### Super Admin management
+---
 
-The custom super-admin interface provides management/reporting pages for:
+## End-to-end product flow
 
-- dashboard overview
-- customers
-- technicians
-- services
-- service requests
-- service addresses
-- service details
-- technician notifications
-- customer support tickets
-- technician support
-- offers
-- customer offers
-- referrals
-- incentives
-- withdrawals
-- platform analytics
-- comprehensive analytics
-- admin data assistant
+~~~text
+Customer
+   |
+   |  Signup / OTP / Login
+   v
+Service Discovery
+   |
+   +--> ML Recommendations
+   |
+   +--> Smart Offers
+   |
+   v
+Service Request
+   |
+   +--> Payment
+   |      +--> Invoice PDF
+   |      +--> Brevo email
+   |
+   v
+Technician Assignment
+   |
+   +--> Live GPS + Route + Voice
+   +--> Real-time Chat
+   |
+   v
+Service Completion
+   |
+   +--> Technician Earnings
+   +--> Incentive Evaluation
+   +--> Customer Rating / Complaint
+   |
+   v
+Admin Analytics + Admin Data Assistant
+~~~
 
-## Comprehensive admin analytics
-
-The admin analytics implementation separates important financial concepts instead of treating them as the same number.
-
-The current analytics layer includes:
-
-- sales / customer payments
-- technician earnings
-- platform income
-- offer discounts
-- referral rewards
-- incentive payouts
-- withdrawal requests
-- approved withdrawals
-- rejected withdrawals
-- pending withdrawals
-- wallet reversals
-- total bookings
-- completed bookings
-- cancelled bookings
-- new customers
-- new technicians
-- top services by bookings
-- service sales
-
-The current platform analytics page additionally exposes:
-
-- ML recommendation performance
-- recommendation count
-- click-through rate
-- conversion rate
-- recommendation scores
-- top recommended services
-- service rating diagnostics
-- validated complaint counts
-- complaint rates
-- smart-offer performance
-- offer assignment/view/redemption statistics
-- offer-driven bookings and revenue
-
-Authoritative analytics code:
-
-- backend/core/analytics_helper.py
-- backend/core/admin_views.py
-- backend/core/services/rating_engine.py
-
-## Admin Data Assistant
-
-The project also contains a local, read-only Admin Data Assistant.
-
-It is not a general-purpose chatbot and does not use an external LLM.
-
-It is designed to answer natural-language questions about data already available to the Seva Bandhu admin system, including:
-
-- technicians
-- customers
-- services
-- bookings
-- sales
-- technician earnings
-- platform summary data
-- ratings
-- complaints
-- offers
-- referrals
-- incentives
-- withdrawals
-- entity details such as contact information
-
-The assistant is integrated as a floating tool inside the custom admin interface.
-
-Important design rules:
-
-- admin-only access
-- read-only behavior
-- database-backed answers
-- controlled query handling
-- no arbitrary Python execution
-- no arbitrary SQL generated from user text
-- no external AI/API dependency
-
-Relevant files:
-
-- backend/core/services/admin_assistant.py
-- backend/core/admin_views.py
-- SevaBandhu-Frontend/templates/admin_custom/components/admin_assistant.html
-
-## Technology Stack
-
-### Backend
-
-- Python
-- Django 5.2
-- Django Channels
-- Daphne / ASGI
-- Django ORM
-- PostgreSQL in deployment
-- SQLite fallback for local development
-- WhiteNoise for collected static files
-
-### Database
-
-- Supabase PostgreSQL for the deployed environment
-- Django migrations are the schema source of truth
-
-### Frontend / UI
-
-The primary application UI is currently implemented with Django templates under:
-
-SevaBandhu-Frontend/templates/
-
-The repository also contains a Vite/React frontend foundation for the Vercel-hosted public frontend.
-
-### Machine learning / data processing
-
-- scikit-learn
-- NumPy
-- pandas
-- joblib
-
-### AI integrations
-
-- Google Gemini
-- Groq
-
-### Authentication / verification
-
-- Django authentication/session system
-- Firebase configuration for phone verification and related authentication flows
-- customer Google-auth endpoint
-
-### Maps / routing
-
-- Leaflet
-- Leaflet Routing Machine
-- OSRM
-
-### Email
-
-- Django email abstraction
-- Brevo transactional email API for deployed email delivery
-- legacy SMTP configuration remains available for deliberate use
-
-### Document generation
-
-- ReportLab
-- xhtml2pdf
-- PDF invoice generation and email attachment flow
-
-### Deployment
-
-- Render — Django backend / ASGI application
-- Supabase — production PostgreSQL database
-- Vercel — public frontend deployment layer
+---
 
 ## Architecture
 
-~~~text
-                         +----------------------+
-                         |       Customer       |
-                         +----------+-----------+
-                                    |
-                                    v
-                         +----------------------+
-                         |    Django Web App    |
-                         |  Templates + Views   |
-                         +----------+-----------+
-                                    |
-               +--------------------+---------------------+
-               |                    |                     |
-               v                    v                     v
-       +--------------+    +----------------+    +---------------+
-       | Django ORM   |    | Django         |    | AI / ML       |
-       | + PostgreSQL |    | Channels       |    | Services      |
-       +------+-------+    +-------+--------+    +-------+-------+
-              |                    |                     |
-              v                    v                     v
-       +--------------+    +----------------+    +---------------+
-       |   Supabase   |    | Tracking/Chat  |    | Recommendations|
-       |  PostgreSQL  |    | /Support WS    |    | Offers / AI    |
-       +--------------+    +----------------+    +---------------+
+<p align="center">
+  <img src="docs/seva-bandhu-architecture.svg" alt="Seva Bandhu architecture diagram" width="100%">
+</p>
 
-       Render  -> Django / Daphne / APIs / Templates / WebSockets
-       Vercel  -> Public frontend deployment layer
-~~~
-
-## Project structure
+The application is centered around Django rather than splitting the business rules between multiple disconnected services.
 
 ~~~text
-Seva-Bandhu/
-├── SevaBandhu-Frontend/
-│   ├── templates/
-│   │   ├── admin/
-│   │   ├── admin_custom/
-│   │   ├── customer/
-│   │   ├── technician/
-│   │   ├── base.html
-│   │   └── home.html
-│   ├── assets/
-│   ├── src/
-│   ├── index.html
-│   ├── package.json
-│   ├── vercel.json
-│   └── .env.example
-│
-├── backend/
-│   ├── manage.py
-│   ├── requirements.txt
-│   ├── core/
-│   │   ├── ai/
-│   │   ├── ml/
-│   │   ├── services/
-│   │   ├── migrations/
-│   │   ├── models.py
-│   │   ├── views.py
-│   │   ├── admin_views.py
-│   │   ├── consumers.py
-│   │   ├── routing.py
-│   │   └── urls.py
-│   ├── seva_bandhu/
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   ├── asgi.py
-│   │   └── wsgi.py
-│   └── render-build.sh
-│
-├── .github/
-│   └── workflows/
-│
-├── render.yaml
-├── .env.example
-├── .gitignore
-└── README.md
+Customer / Technician
+        |
+        v
+ Django Templates + Views
+        |
+        +--------------------+
+        |                    |
+        v                    v
+  Django ORM           Django Channels
+        |                    |
+        v                    +--> Tracking
+  Supabase PostgreSQL        +--> Chat
+        |                    +--> Support
+        |
+        +--> ML / Ratings / Offers / Wallets / Analytics
+        |
+        +--> Gemini / Groq
+        |
+        +--> Brevo / Firebase / OSRM
 ~~~
 
-## Local development
+---
 
-### Backend
+## Core features
 
-Create and activate a virtual environment:
+### Customer
 
-~~~bash
-cd backend
-python -m venv .venv
-~~~
+- Email OTP verification
+- Firebase phone verification
+- Google sign-in flow
+- Service discovery and booking
+- Dynamic service ratings
+- Online/offline payment flows
+- Customer wallet
+- Invoice PDF + email
+- Live technician tracking
+- Real-time chat
+- Technician ratings
+- Complaints / support tickets
+- Offers and referrals
+- Personalized ML recommendations
+- Smart offers
+- Customer AI assistant
 
-Windows PowerShell:
+### Technician
 
-~~~powershell
-.\\.venv\\Scripts\\Activate.ps1
-~~~
+- Registration + profile completion
+- Job dispatch and acceptance
+- Status management
+- Start Journey flow
+- Live GPS tracking
+- OSRM navigation
+- Voice guidance
+- Real-time chat
+- Notifications
+- Wallet + earnings
+- Withdrawals
+- Incentive missions
+- Guided support + admin escalation
 
-Linux/macOS:
+### Super Admin
 
-~~~bash
-source .venv/bin/activate
-~~~
+- Customers
+- Technicians
+- Services
+- Service requests
+- Offers
+- Customer offers
+- Referrals
+- Support tickets
+- Technician support
+- Incentives
+- Withdrawals
+- Ratings
+- Platform analytics
+- Comprehensive financial analytics
+- Read-only Admin Data Assistant
 
-Install dependencies:
+---
 
-~~~bash
-pip install -r requirements.txt
-~~~
+## Machine learning
 
-Copy the environment template:
+Model: collaborative filtering with scikit-learn KNN
+
+Signal design:
+
+- completed interactions → strong positive signal
+- assigned / in-progress interactions → positive signal
+- pending interactions → weaker positive signal
+- cancelled interactions → negative signal
+- recency decay → recent activity matters more
+- similar customers → collaborative signal
+- cold start → popularity fallback
+
+Measurement: recommendation impressions, clicks and bookings are stored in RecommendationLog, enabling CTR and conversion analytics.
+
+Relevant modules:
 
 ~~~text
-.env.example -> .env
-~~~
-
-Keep real secrets only in the local .env.
-
-Run migrations:
-
-~~~bash
-python manage.py migrate
-~~~
-
-Run the Django development server:
-
-~~~bash
-python manage.py runserver
-~~~
-
-### ML model training
-
-The recommendation training logic is located at:
-
-~~~text
+backend/core/ml/recommender.py
 backend/core/ml/train_recommender.py
-~~~
-
-It reads service-request history, applies interaction/status/recency weighting, builds the customer-service matrix, and saves model artifacts under:
-
-~~~text
 backend/core/ml/model/
 ~~~
+
+---
+
+## Intelligent offers
+
+The offer engine combines business rules with recommendation signals.
+
+It supports:
+
+- new-customer targeting
+- frequent-customer targeting
+- service-specific offers
+- flat discounts
+- percentage discounts
+- maximum discount caps
+- minimum order values
+- usage limits
+- per-customer limits
+- expiry windows
+- customer offer assignments
+- recent intent tracking
+- cooldown protection
+- ML-aware offer prioritization
+
+Relevant module:
+
+~~~text
+backend/core/services/offer_engine.py
+~~~
+
+---
+
+## Real-time layer
+
+Django Channels / WebSockets power:
+
+~~~text
+/ws/requests/
+                -> technician request notifications
+
+/ws/tracking/<request_id>/
+                -> live technician tracking
+
+/ws/chat/<request_id>/
+                -> customer <-> technician chat
+
+/ws/support/technician/<session_id>/
+                -> technician <-> admin support
+~~~
+
+The tracking consumer validates the authenticated participant, validates coordinates, persists tracking data and distributes authorized location updates.
+
+---
+
+## AI layer
+
+### Customer AI
+
+~~~text
+Gemini
+   |
+   | failure / unavailable
+   v
+Groq fallback
+~~~
+
+The customer assistant receives context derived from the logged-in customer's account, recent requests and available services.
+
+### Admin Data Assistant
+
+~~~text
+Admin question
+     |
+     v
+Deterministic parser
+     |
+     v
+Controlled Django ORM query
+     |
+     v
+Database-backed answer
+~~~
+
+No LLM is required for the admin assistant.
+
+Relevant modules:
+
+~~~text
+backend/core/ai/
+backend/core/services/admin_assistant.py
+~~~
+
+---
+
+## Financial + operations analytics
+
+The admin analytics layer keeps different money concepts separate:
+
+- customer sales / payments
+- technician earnings
+- platform income
+- discounts
+- referral rewards
+- incentive payouts
+- withdrawal requests
+- approved / rejected / pending withdrawals
+- reversals
+
+It also surfaces operational metrics around customers, technicians, bookings, services, ratings, complaints, recommendations and offers.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python, Django 5.2 |
+| Real-time | Django Channels, Daphne / ASGI |
+| Database | PostgreSQL (Supabase) |
+| Local DB | SQLite fallback |
+| ML | scikit-learn, NumPy, pandas, joblib |
+| AI | Google Gemini, Groq |
+| Maps | Leaflet, Leaflet Routing Machine, OSRM |
+| Email | Brevo transactional API |
+| Verification | Firebase |
+| PDF | ReportLab, xhtml2pdf |
+| Frontend layer | Django templates + Vite/React foundation |
+| Deployment | Render + Supabase + Vercel |
+
+---
 
 ## Deployment
 
 ### Render
 
-The deployed Django application runs as an ASGI service using Daphne.
-
-Deployment configuration is stored in:
-
-~~~text
-render.yaml
-backend/render-build.sh
-~~~
-
-The Render build performs:
-
-~~~bash
-pip install -r requirements.txt
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python manage.py collectstatic --no-input
-python manage.py migrate --noinput
-~~~
-
-Important production environment variables include:
-
-- DJANGO_SECRET_KEY
-- DJANGO_DEBUG
-- DJANGO_ALLOWED_HOSTS
-- DJANGO_CSRF_TRUSTED_ORIGINS
-- DATABASE_URL
-- REDIS_URL when using a shared Redis channel layer
-- PUBLIC_BASE_URL
-- Brevo email variables
-- Gemini/Groq AI variables
-- Firebase configuration variables
+The Django application runs as an ASGI service with Daphne.
 
 ### Supabase
 
-Supabase PostgreSQL is used as the production database through Django's DATABASE_URL.
-
-The schema is managed by Django migrations.
-
-Do not manually replace the Django schema with unrelated Supabase Auth tables.
+PostgreSQL is the production database and Django migrations remain the schema source of truth.
 
 ### Vercel
 
-The SevaBandhu-Frontend directory contains the standalone frontend/deployment layer.
+SevaBandhu-Frontend contains the public frontend/deployment layer.
 
-Important values for Vercel are:
+Current Vercel settings:
 
 ~~~text
 Root Directory: SevaBandhu-Frontend
@@ -602,86 +430,51 @@ Output Directory: dist
 Install Command: npm install
 ~~~
 
-The public backend URL is configured through:
+The existing Django pages continue to provide the application's full working UI while the standalone Vercel frontend evolves independently.
 
-~~~text
-VITE_BACKEND_URL
-~~~
+---
 
-Do not place private secrets such as Django secret keys, database passwords, Brevo API keys, Gemini/Groq secret keys, or Firebase server-side secrets in frontend environment variables.
+## Run locally
 
-## Environment variables
-
-Use .env.example as the reference template.
-
-### Django / deployment
-
-~~~text
-DJANGO_SECRET_KEY=
-DJANGO_DEBUG=
-DJANGO_ALLOWED_HOSTS=
-DJANGO_CSRF_TRUSTED_ORIGINS=
-DATABASE_URL=
-PUBLIC_BASE_URL=
-REDIS_URL=
-DJANGO_TIME_ZONE=
-~~~
-
-### Brevo transactional email
-
-~~~text
-EMAIL_BACKEND=core.email_backends.BrevoEmailBackend
-BREVO_API_KEY=
-BREVO_SENDER_EMAIL=
-BREVO_SENDER_NAME=Seva Bandhu
-BREVO_API_TIMEOUT=15
-DEFAULT_FROM_EMAIL=
-~~~
-
-The deployed application uses Brevo's HTTPS API so it does not need outbound Gmail SMTP.
-
-### AI
-
-~~~text
-GEMINI_API_KEY=
-AI_MODEL_NAME=
-GROQ_API_KEY=
-GROQ_MODEL=
-~~~
-
-The current customer AI implementation uses Gemini first and Groq as fallback.
-
-### Firebase
-
-~~~text
-FIREBASE_API_KEY=
-FIREBASE_AUTH_DOMAIN=
-FIREBASE_PROJECT_ID=
-FIREBASE_STORAGE_BUCKET=
-FIREBASE_MESSAGING_SENDER_ID=
-FIREBASE_APP_ID=
-~~~
-
-## Testing
-
-The repository includes tests for important flows, including:
-
-- customer account/signup verification behavior
-- Brevo email backend behavior
-- OTP-related email flow support
-- recommendation engine behavior
-
-GitHub Actions is used for automated validation of backend email changes and frontend builds.
-
-Examples:
+### Backend
 
 ~~~bash
 cd backend
-python manage.py check
-python manage.py test
+python -m venv .venv
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ~~~
 
-For the Vite frontend:
+On Windows PowerShell:
+
+~~~powershell
+.\\.venv\\Scripts\\Activate.ps1
+~~~
+
+### Environment
+
+Copy:
+
+~~~text
+.env.example -> .env
+~~~
+
+Typical production integrations use:
+
+~~~text
+DATABASE_URL=
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
+GEMINI_API_KEY=
+GROQ_API_KEY=
+FIREBASE_API_KEY=
+...
+~~~
+
+Never commit real secrets.
+
+### Frontend build
 
 ~~~bash
 cd SevaBandhu-Frontend
@@ -689,65 +482,58 @@ npm install
 npm run build
 ~~~
 
-## Security notes
+---
 
-- Never commit .env files.
-- Never commit real API keys or passwords.
-- Rotate credentials if they are exposed or accidentally committed.
-- Keep the admin assistant read-only and admin-protected.
-- Keep payment, wallet, withdrawal, and account mutation logic server-side.
-- Use HTTPS in production.
-- Keep the Django production database behind the application rather than exposing unrestricted data directly to the browser.
-- Review Supabase Row Level Security and Data API exposure separately if client-side Supabase access is introduced.
+## Repository map
 
-## Current production endpoint
+~~~text
+backend/core/
+├── ai/                  # Customer AI
+├── ml/                  # Recommendation engine
+├── services/            # Ratings, offers, wallet, incentives, support, admin assistant
+├── models.py            # Core data model
+├── views.py             # Customer + technician application flows
+├── admin_views.py       # Super-admin operations + analytics
+├── consumers.py         # WebSocket consumers
+└── routing.py           # WebSocket routing
 
-Backend:
+SevaBandhu-Frontend/
+├── templates/
+│   ├── customer/
+│   ├── technician/
+│   └── admin_custom/
+├── assets/
+└── src/                 # Vite/React frontend foundation
+~~~
 
-https://seva-bandhu-src9060.onrender.com
+---
 
-The application also has a Vercel frontend deployment layer using the SevaBandhu-Frontend project directory.
+## A few implementation details worth exploring
 
-## Main implementation modules
+Start here if you want to understand the project quickly:
 
 ~~~text
 backend/core/models.py
 backend/core/views.py
-backend/core/admin_views.py
 backend/core/consumers.py
 backend/core/analytics_helper.py
-
-backend/core/ai/chatbot.py
-backend/core/ai/context.py
-backend/core/ai/prompts.py
 
 backend/core/ml/recommender.py
 backend/core/ml/train_recommender.py
 
-backend/core/services/rating_engine.py
 backend/core/services/offer_engine.py
+backend/core/services/rating_engine.py
 backend/core/services/technician_wallet.py
 backend/core/services/incentive_engine.py
 backend/core/services/support_flow.py
 backend/core/services/admin_assistant.py
+
+backend/core/ai/chatbot.py
 ~~~
 
-## Project status
+---
 
-Seva Bandhu currently combines:
-
-- service request management
-- customer and technician workflows
-- payments and invoices
-- real-time tracking and chat
-- AI-assisted customer support
-- ML-based service recommendations
-- smart offers and referral features
-- technician wallet, withdrawals, and incentives
-- customer/technician support workflows
-- service and technician ratings
-- comprehensive admin analytics
-- natural-language admin data retrieval
-- Render + Supabase + Vercel deployment support
-
-The codebase continues to evolve, so this README should be updated when major architectural or feature changes are introduced.
+<p align="center">
+  <b>Seva Bandhu is not just “book a technician.”</b><br>
+  It is a service platform with personalization, real-time logistics, financial workflows and operational intelligence built around the booking lifecycle.
+</p>
