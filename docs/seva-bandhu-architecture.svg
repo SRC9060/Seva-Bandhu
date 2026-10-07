@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="680" viewBox="0 0 1400 680" role="img" aria-labelledby="title desc">
+<title id="title">Seva Bandhu architecture</title><desc id="desc">Architecture showing customers and technicians entering a Django application backed by PostgreSQL, real-time channels and intelligence services.</desc>
+<defs>
+ <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b85a8"/></marker>
+ <filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d1d38" flood-opacity=".12"/></filter>
+</defs>
+<rect width="1400" height="680" rx="30" fill="#f7faff"/>
+<text x="60" y="70" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="800" fill="#10223e">How Seva Bandhu fits together</text>
+<text x="60" y="105" font-family="Inter,Arial,sans-serif" font-size="17" fill="#63728b">One Django core connects the transactional system, real-time layer and intelligence layer.</text>
+
+<g font-family="Inter,Arial,sans-serif" filter="url(#s)">
+ <rect x="70" y="170" width="250" height="110" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="104" y="213" font-size="20" font-weight="800" fill="#1d5fc7">Customer UI</text>
+ <text x="104" y="243" font-size="14" fill="#6a7890">Django templates</text>
+ <text x="104" y="265" font-size="14" fill="#6a7890">Bookings • Wallet • AI</text>
+
+ <rect x="70" y="360" width="250" height="110" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="104" y="403" font-size="20" font-weight="800" fill="#1d8c69">Technician UI</text>
+ <text x="104" y="433" font-size="14" fill="#6a7890">Django templates</text>
+ <text x="104" y="455" font-size="14" fill="#6a7890">Jobs • GPS • Wallet</text>
+
+ <rect x="420" y="205" width="270" height="230" rx="24" fill="#0f2f66" stroke="#234d8d"/>
+ <text x="462" y="250" font-size="24" font-weight="800" fill="#fff">Django Core</text>
+ <text x="462" y="286" font-size="15" fill="#d5e4fb">Views + ORM + business logic</text>
+ <text x="462" y="317" font-size="15" fill="#d5e4fb">Auth + payments + support</text>
+ <text x="462" y="348" font-size="15" fill="#d5e4fb">Admin management + analytics</text>
+ <text x="462" y="379" font-size="15" fill="#d5e4fb">ASGI / Daphne</text>
+ <text x="462" y="410" font-size="15" fill="#9bc0ff">Single application boundary</text>
+
+ <rect x="790" y="150" width="250" height="145" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="825" y="193" font-size="20" font-weight="800" fill="#6f45c8">AI + ML</text>
+ <text x="825" y="221" font-size="14" fill="#6a7890">Gemini → Groq fallback</text>
+ <text x="825" y="247" font-size="14" fill="#6a7890">KNN recommendations</text>
+ <text x="825" y="273" font-size="14" fill="#6a7890">Smart offers + rating engine</text>
+
+ <rect x="1090" y="150" width="240" height="145" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="1124" y="193" font-size="20" font-weight="800" fill="#c16b18">Real-time</text>
+ <text x="1124" y="221" font-size="14" fill="#6a7890">Django Channels</text>
+ <text x="1124" y="247" font-size="14" fill="#6a7890">GPS tracking + chat</text>
+ <text x="1124" y="273" font-size="14" fill="#6a7890">Support WebSockets</text>
+
+ <rect x="790" y="370" width="250" height="145" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="825" y="413" font-size="20" font-weight="800" fill="#1d5fc7">PostgreSQL</text>
+ <text x="825" y="441" font-size="14" fill="#6a7890">Supabase in production</text>
+ <text x="825" y="467" font-size="14" fill="#6a7890">Django migrations</text>
+ <text x="825" y="493" font-size="14" fill="#6a7890">Transactional source of truth</text>
+
+ <rect x="1090" y="370" width="240" height="145" rx="20" fill="#fff" stroke="#d9e5f6"/>
+ <text x="1124" y="413" font-size="20" font-weight="800" fill="#227c5c">Integrations</text>
+ <text x="1124" y="441" font-size="14" fill="#6a7890">Brevo transactional email</text>
+ <text x="1124" y="467" font-size="14" fill="#6a7890">Firebase verification</text>
+ <text x="1124" y="493" font-size="14" fill="#6a7890">Leaflet + OSRM routing</text>
+</g>
+
+<g stroke="#6b85a8" stroke-width="3" fill="none" marker-end="url(#arrow)">
+ <path d="M320 225 C360 225 370 250 420 270"/>
+ <path d="M320 415 C360 415 370 390 420 370"/>
+ <path d="M690 265 C730 240 748 225 790 220"/>
+ <path d="M690 380 C735 390 745 410 790 430"/>
+ <path d="M690 315 C800 300 1000 220 1090 220"/>
+ <path d="M690 405 C820 450 1000 450 1090 450"/>
+</g>
+
+<text x="420" y="570" font-family="Inter,Arial,sans-serif" font-size="16" fill="#61728d">Deployment: Render (Django/ASGI) + Supabase (PostgreSQL) + Vercel (public frontend layer)</text>
+</svg>
